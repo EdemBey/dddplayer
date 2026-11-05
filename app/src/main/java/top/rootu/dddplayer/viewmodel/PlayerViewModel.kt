@@ -1098,6 +1098,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      * (без повторного запроса для HLS), остальное загружается как раньше, сразу.
      */
     fun loadMedia(items: List<MediaItem>, startIndex: Int, forceM3uProbe: Boolean = false) {
+        android.util.Log.d("DDDPatch", "loadMedia startIndex=$startIndex size=${items.size} force=$forceM3uProbe")
         loadMediaJob?.cancel()
         if (items.size != 1 || (!forceM3uProbe && !playerManager.isM3uCandidate(items))) {
             loadPlaylist(items, startIndex)

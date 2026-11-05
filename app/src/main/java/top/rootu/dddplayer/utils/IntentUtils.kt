@@ -138,6 +138,7 @@ object IntentUtils {
             )
         }
         startIndex = startIndex.coerceIn(0, (playlist.size - 1).coerceAtLeast(0))
+        android.util.Log.d("DDDPatch", "parseIntent startIndex=$startIndex size=${playlist.size} data=$dataUri")
         return Pair(playlist, startIndex)
     }
 
