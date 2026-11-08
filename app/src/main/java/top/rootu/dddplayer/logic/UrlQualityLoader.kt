@@ -20,8 +20,10 @@ import java.util.concurrent.TimeUnit
  *
  * The selection rules mirror the plugin:
  *  - providers ordered by measured speed/reliability;
- *  - one label per real file (some CDNs sign the same file for every label);
- *  - lower qualities are taken from providers that really have separate files.
+ *  - every signed URL is kept: some CDNs select the variant by the query
+ *    signature while the path stays the same;
+ *  - duplicate quality labels between providers are dropped, so the faster
+ *    provider always wins.
  */
 class UrlQualityLoader {
 
@@ -34,8 +36,6 @@ class UrlQualityLoader {
             "sibnet", "myvi", "ustore", "mail", "youtube"
         )
 
-        // File identity inside a proxy URL: /api/player/proxy?src=<encoded>
-        private const val PROXY_MARKER = "/api/player/proxy?src="
     }
 
     private val client = OkHttpClient.Builder()
@@ -108,7 +108,7 @@ class UrlQualityLoader {
                 Candidate(
                     name = quality,
                     url = absolute,
-                    key = fileIdentity(absolute),
+                    key = absolute,
                     rank = providerRank(source.optString("provider")),
                     weight = qualityWeight(quality)
                 )
@@ -141,21 +141,6 @@ class UrlQualityLoader {
         }
     }
 
-    /** Dzen signs every quality label separately, but serves the same file. */
-    private fun fileIdentity(url: String): String {
-        var value = url
-        val pos = value.indexOf(PROXY_MARKER)
-
-        if (pos != -1) {
-            value = try {
-                Uri.decode(value.substring(pos + PROXY_MARKER.length))
-            } catch (e: Exception) {
-                value
-            }
-        }
-
-        return value.substringBefore('?').trimEnd('/')
-    }
 
     private fun providerRank(provider: String): Int {
         val name = provider.lowercase()
