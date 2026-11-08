@@ -396,6 +396,9 @@ object IntentUtils {
         } ?: run {
             // Fallback: строки
             bundle.getStringArrayList(key)?.map { it.toUri() }?.toTypedArray()
+        } ?: run {
+            // Fallback: String[] (в т.ч. adb am start --esa)
+            bundle.getStringArray(key)?.map { it.toUri() }?.toTypedArray()
         }
     }
 
