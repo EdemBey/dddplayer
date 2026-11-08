@@ -16,6 +16,8 @@ data class MediaItem(
     val stereoType: StereoInputType = StereoInputType.NONE,
     // Альтернативные URL одного видео (Lampa quality map / DDD intent extra)
     val urlQualities: List<UrlQuality> = emptyList(),
+    // Адрес, из которого можно получить качества для этой серии (Naruto Based based API)
+    val qualitySourceUrl: String? = null,
     // Уникальный ID для DiffUtil, генерируется автоматически при создании объекта
     val uuid: String = UUID.randomUUID().toString()
 )

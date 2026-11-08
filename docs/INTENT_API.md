@@ -59,6 +59,18 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 `X-DDD-Quality: [{"name":"1080p","url":"..."}]`. Заголовок разбирается как качества и удаляется из headers, чтобы не
 уходить на сервер видео.
 
+### Качества для остальных серий плейлиста
+
+`X-DDD-Quality-Sources` — JSON-объект «индекс элемента в `video_list`» → «URL, отдающий список источников»:
+
+```json
+{"0":"https://site/api/player/based?source=44%3Atoken","1":"https://site/api/player/based?source=44%3Atoken2"}
+```
+
+Заголовок тоже удаляется из headers. Когда пользователь переходит на серию, у которой нет `ddd_quality`, плеер
+запрашивает дескриптор (один раз на серию, с кэшем), собирает список качеств по тому же правилу, что и плагин
+(приоритет провайдеров, один пункт на реальный файл, `Auto` = исходная ссылка), и показывает меню качества.
+
 Массивы строк читает `getSmartStringArray`: подходят `String[]`, `ArrayList<String>`, `CharSequence[]`
 и `ArrayList<CharSequence>`.
 

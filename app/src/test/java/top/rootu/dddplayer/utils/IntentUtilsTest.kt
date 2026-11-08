@@ -3,6 +3,7 @@ package top.rootu.dddplayer.utils
 import android.content.Intent
 import android.net.Uri
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -167,5 +168,37 @@ class IntentUtilsTest {
         assertEquals(2, items[startIndex].urlQualities.size)
         assertEquals(0, items[0].urlQualities.size)
         assertEquals(0, items[2].urlQualities.size)
+    }
+
+    @Test
+    fun `playlist quality sources header is parsed per item and stripped`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(videos[1], "video/*")
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "Referer", "http://example.com/",
+                    "X-DDD-Quality-Sources",
+                    """{"0":"http://example.com/based?source=44%3Aa","2":"http://example.com/based?source=44%3Ac"}""",
+                    "X-DDD-Quality",
+                    """[{"name":"1080p","url":"http://example.com/1080.mp4"}]"""
+                )
+            )
+        }
+
+        val (items, startIndex) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals(1, startIndex)
+        assertEquals("http://example.com/based?source=44%3Aa", items[0].qualitySourceUrl)
+        assertEquals(null, items[1].qualitySourceUrl)
+        assertEquals("http://example.com/based?source=44%3Ac", items[2].qualitySourceUrl)
+
+        // Service headers must not leak to the video CDN
+        items.forEach { item ->
+            assertTrue(item.headers.keys.none { it.equals("X-DDD-Quality", true) })
+            assertTrue(item.headers.keys.none { it.equals("X-DDD-Quality-Sources", true) })
+            assertEquals("http://example.com/", item.headers["Referer"])
+        }
     }
 }

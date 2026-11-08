@@ -41,6 +41,7 @@ import top.rootu.dddplayer.logic.SettingsMutator
 import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.StreamTypeLogic
 import top.rootu.dddplayer.logic.TrackLogic
+import top.rootu.dddplayer.logic.UrlQualityLoader
 import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.HistoryEntry
 import top.rootu.dddplayer.model.HistorySource
@@ -186,6 +187,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val currentPlaylist: LiveData<List<MediaItem>> = _currentPlaylist
 
     private val chapterLoader = ChapterLoader()
+    private val urlQualityLoader = UrlQualityLoader()
+    private val qualitySourceRequests = mutableSetOf<String>()
+    private var qualitySourceJob: kotlinx.coroutines.Job? = null
     private val _chapters = MutableLiveData<List<Chapter>>(emptyList())
     val chapters: LiveData<List<Chapter>> = _chapters
     private var chaptersJob: kotlinx.coroutines.Job? = null
@@ -766,6 +770,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val urlQualities = currentItem?.urlQualities ?: emptyList()
             _urlQualityOptions.value = urlQualities
             _currentQualityName.value = urlQualities.firstOrNull { it.url == currentUri }?.name ?: "Auto"
+
+            if (urlQualities.isEmpty()) {
+                currentItem?.qualitySourceUrl?.let { resolveUrlQualities(currentItem, it) }
+            }
 
             isSettingsLoadedFromDb = false
             _inputType.value = StereoInputType.NONE
@@ -2153,8 +2161,45 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         playerManager.reloadPlaylistItems(newPlaylist, p.currentMediaItemIndex, position)
     }
 
-    private fun showAutoDetectToast(type: StereoInputType) {
-        val typeName = type.name.replace("_", " ")
+    /**
+     * Качества для серии из плейлиста.
+     *
+     * Lampa Android передаёт во внешний плеер только URL из video_list, поэтому
+     * карты качеств остальных серий приходят отдельным заголовком с адресом
+     * API. Список тянем один раз на серию и кэшируем в самом элементе.
+     */
+    private fun resolveUrlQualities(item: MediaItem, descriptorUrl: String) {
+        if (!qualitySourceRequests.add(item.uuid)) return
+
+        qualitySourceJob = viewModelScope.launch {
+            val qualities = withContext(Dispatchers.IO) { urlQualityLoader.load(descriptorUrl) }
+            qualitySourceRequests.remove(item.uuid)
+
+            if (qualities.isEmpty()) return@launch
+
+            val playlist = _currentPlaylist.value ?: return@launch
+            val index = playlist.indexOfFirst { it.uuid == item.uuid }
+            if (index == -1) return@launch
+
+            val current = playlist[index]
+            val options = listOf(UrlQuality("Auto", current.uri.toString())) + qualities
+            val updated = current.copy(urlQualities = options)
+
+            _currentPlaylist.value = playlist.toMutableList().apply { set(index, updated) }
+            _playlistUiState.value?.let { state ->
+                _playlistUiState.value = state.copy(
+                    items = state.items.map { if (it.uuid == updated.uuid) updated else it }
+                )
+            }
+
+            if (player?.currentMediaItem?.mediaId == item.uuid) {
+                _urlQualityOptions.postValue(options)
+                _currentQualityName.postValue("Auto")
+            }
+        }
+    }
+
+    private fun showAutoDetectToast(type: StereoInputType) {        val typeName = type.name.replace("_", " ")
         // Используем Application Context для тоста, так как он не зависит от локали Activity
         // и не вызывает проблем с утечками, но здесь мы должны использовать getString из Application
         // для корректной локализации, если язык был изменен.

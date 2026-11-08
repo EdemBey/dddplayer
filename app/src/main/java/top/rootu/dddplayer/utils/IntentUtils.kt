@@ -18,6 +18,9 @@ import top.rootu.dddplayer.model.UrlQuality
 
 object IntentUtils {
 
+    const val QUALITY_HEADER = "X-DDD-Quality"
+    const val QUALITY_SOURCES_HEADER = "X-DDD-Quality-Sources"
+
     // Внутренние ключи стартового экрана (FileBrowserActivity -> PlayerActivity), внешним приложениям не нужны
     const val EXTRA_HISTORY_KIND = "top.rootu.dddplayer.history_kind"
     const val EXTRA_HISTORY_SOURCE = "top.rootu.dddplayer.history_source"
@@ -111,6 +114,7 @@ object IntentUtils {
 
         val headers = parseHeaders(extras)
         val urlQualities = parseUrlQualities(extras).ifEmpty { parseUrlQualitiesFromHeaders(headers) }
+        val qualitySources = parseQualitySources(headers)
         val cleanHeaders = stripQualityHeaders(headers)
 
         val playlist = mutableListOf<MediaItem>()
@@ -144,7 +148,8 @@ object IntentUtils {
                     posterUri = posters?.getOrNull(i)?.takeIf { it.isNotEmpty() }?.toUri(),
                     headers = cleanHeaders,
                     subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri, listDir) },
-                    startPositionMs = pos
+                    startPositionMs = pos,
+                    qualitySourceUrl = qualitySources[i]
                 )
             )
         }
@@ -196,16 +201,48 @@ object IntentUtils {
      */
     private fun parseUrlQualitiesFromHeaders(headers: Map<String, String>): List<UrlQuality> {
         val raw = headers.entries
-            .firstOrNull { it.key.equals("X-DDD-Quality", ignoreCase = true) }
+            .firstOrNull { it.key.equals(QUALITY_HEADER, ignoreCase = true) }
             ?.value
             ?: return emptyList()
 
         return parseUrlQualitiesJson(raw)
     }
 
-    /** Служебный заголовок не должен уходить на сервер видео. */
+    /** Служебные заголовки не должны уходить на сервер видео. */
     private fun stripQualityHeaders(headers: Map<String, String>): Map<String, String> {
-        return headers.filterKeys { !it.equals("X-DDD-Quality", ignoreCase = true) }
+        return headers.filterKeys {
+            !it.equals(QUALITY_HEADER, ignoreCase = true) &&
+                !it.equals(QUALITY_SOURCES_HEADER, ignoreCase = true)
+        }
+    }
+
+    /**
+     * Карта "индекс серии в video_list" -> адрес, отдающий список качеств.
+     * Lampa Android передаёт в video_list только URL, поэтому качества для
+     * остальных серий приходят отдельным заголовком.
+     */
+    private fun parseQualitySources(headers: Map<String, String>): Map<Int, String> {
+        val raw = headers.entries
+            .firstOrNull { it.key.equals(QUALITY_SOURCES_HEADER, ignoreCase = true) }
+            ?.value
+            ?: return emptyMap()
+
+        val result = mutableMapOf<Int, String>()
+
+        try {
+            val obj = JSONObject(raw)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val index = key.toIntOrNull() ?: continue
+                val value = obj.optString(key, "")
+                if (value.isNotBlank()) result[index] = value
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return result
     }
 
     private fun parseUrlQualitiesJson(raw: String): List<UrlQuality> {
