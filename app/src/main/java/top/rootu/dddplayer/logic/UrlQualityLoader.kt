@@ -74,6 +74,7 @@ class UrlQualityLoader {
         }
 
         if (qualities.isNotEmpty()) cache.put(descriptorUrl, qualities)
+        Log.d(TAG, "resolved ${qualities.size} qualities for $descriptorUrl")
         return qualities
     }
 
