@@ -201,4 +201,61 @@ class IntentUtilsTest {
             assertEquals("http://example.com/", item.headers["Referer"])
         }
     }
+
+    @Test
+    fun inlineQualitySourcesFillNextEpisodes() {
+        val videos = arrayListOf(
+            Uri.parse("http://example.com/e1.mp4"),
+            Uri.parse("http://example.com/e2.mp4"),
+            Uri.parse("http://example.com/e3.mp4")
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Quality-Sources",
+                    """{"1":[{"name":"720p","url":"http://example.com/e2-720.mp4"},{"name":"1080p","url":"http://example.com/e2.mp4"}],"2":"http://example.com/based?source=x"}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals(listOf("720p", "1080p"), items[1].urlQualities.map { it.name })
+        assertEquals(null, items[1].qualitySourceUrl)
+        assertEquals("http://example.com/based?source=x", items[2].qualitySourceUrl)
+        assertTrue(items[2].urlQualities.isEmpty())
+        assertTrue(items[1].headers.keys.none { it.equals("X-DDD-Quality-Sources", true) })
+    }
+
+    @Test
+    fun itemKeysAndPositionsAreParsedAndStripped() {
+        val videos = arrayListOf(
+            Uri.parse("http://example.com/e1.mp4"),
+            Uri.parse("http://example.com/e2.mp4")
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Item-Keys", """{"0":"rezka:1:56:1:1","1":"rezka:1:56:1:2"}""",
+                    "X-DDD-Positions", """{"1":734000}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals("rezka:1:56:1:1", items[0].resumeKey)
+        assertEquals("rezka:1:56:1:2", items[1].resumeKey)
+        assertEquals(0L, items[0].knownPositionMs)
+        assertEquals(734000L, items[1].knownPositionMs)
+        items.forEach { item ->
+            assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
+        }
+    }
 }

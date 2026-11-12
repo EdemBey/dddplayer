@@ -369,6 +369,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Флаг для однократного срабатывания Resume при открытии плеера
     private var isFirstItemLoaded = false
 
+    // Элемент, для которого уже проверяли продолжение просмотра (mediaId): диалог
+    // предлагается при каждом переходе на другую серию, но не при перезагрузке той же
+    private var resumeCheckedItemId: String? = null
+
+    // Ключ настроек текущего элемента: нужен, чтобы отметить серию досмотренной при автопереходе
+    private var activeSettingsKey: String? = null
+
     // Позиция из внешнего приложения, о которой нужно спросить (id элемента -> позиция)
     private var pendingExternalPosition: Pair<String, Long>? = null
     private val _showResumeDialogEvent = MutableLiveData<Pair<Long, Long>?>()
@@ -465,6 +472,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             ioRetryCount = 0 // Сброс счетчика при смене видео
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) markFinished(activeSettingsKey)
             handleMediaItemTransition(mediaItem)
         }
 
@@ -801,8 +809,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             if (currentUri != null) {
+                val settingsKey = settingsKeyFor(currentItem, currentUri)!!
+                activeSettingsKey = settingsKey
                 viewModelScope.launch {
-                    val saved = repository.getVideoSettings(currentUri!!)
+                    val saved = repository.getVideoSettings(settingsKey)
                     if (saved != null) {
                         applySettings(saved)
                         // Сохраняем ID из базы как отложенные
@@ -818,8 +828,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     if (!subtitleResolved && repository.getSubtitleAutoMode() != SettingsRepository.SUB_AUTO_DEFAULT) {
                         player?.let { updateTracksInfo(it.currentTracks) }
                     }
-                    if (!isFirstItemLoaded) {
-                        handleResumeLogic(saved)
+                    val itemId = mediaItem?.mediaId
+                    if (!isFirstItemLoaded || itemId != resumeCheckedItemId) {
+                        resumeCheckedItemId = itemId
+                        handleResumeLogic(saved, currentItem)
                     }
                     // Помечаем, что первое видео обработавано.
                     isFirstItemLoaded = true
@@ -830,13 +842,33 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** Ключ для настроек и позиции: стабильный ключ серии от приложения, иначе URL. */
+    private fun settingsKeyFor(item: MediaItem?, uri: String?): String? {
+        return item?.resumeKey?.takeIf { it.isNotBlank() }?.let { "key:$it" } ?: uri
+    }
+
+    private fun currentPlaylistItem(): MediaItem? {
+        val id = player?.currentMediaItem?.mediaId ?: return null
+        return _currentPlaylist.value?.find { it.uuid == id }
+    }
+
+    /** Серия доиграла до конца: следующий раз начинать с начала, а не со старой позиции. */
+    private fun markFinished(key: String?) {
+        if (key == null) return
+        viewModelScope.launch {
+            repository.getVideoSettings(key)?.let {
+                repository.saveVideoSettings(it.copy(lastUpdated = System.currentTimeMillis(), lastPosition = 0L))
+            }
+        }
+    }
+
     /**
-     * Продолжение просмотра для первого элемента.
+     * Продолжение просмотра для первого элемента и для каждой следующей серии.
      * Позиция из внешнего приложения (интент) приоритетнее сохраненной в плеере: при режиме
      * "Применять сразу" плеер уже стартовал с нее, при режиме "Спрашивать" - показываем диалог.
      * Сохраненная позиция используется, только если приложение позицию не передало.
      */
-    private fun handleResumeLogic(settings: VideoSettings?) {
+    private fun handleResumeLogic(settings: VideoSettings?, item: MediaItem? = null) {
         if (player?.isCurrentMediaItemLive == true) {
             pendingExternalPosition = null
             return
@@ -862,10 +894,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         } else 0L
         val resumeMode = repository.getResumeMode()
         // Если в интенте была позиция (не 0), игнорируем БД
-        if (settings == null || intentPos > 0 || resumeMode == SettingsRepository.RESUME_NEVER) return
+        if (intentPos > 0 || resumeMode == SettingsRepository.RESUME_NEVER) return
 
-        val savedPos = settings.lastPosition
-        val totalDur = settings.duration
+        var savedPos = settings?.lastPosition ?: 0L
+        var totalDur = settings?.duration ?: 0L
+        // Своей записи нет: берем позицию, которую знает приложение (X-DDD-Positions)
+        if (settings == null && item != null && item.knownPositionMs > 0) {
+            savedPos = item.knownPositionMs
+            totalDur = knownDuration ?: 0L
+        }
         if (!isResumePositionMeaningful(savedPos, totalDur)) return
 
         // Применяем режим
@@ -1160,8 +1197,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _currentPosition.value = pos
     }
     fun togglePlayPause() = playerManager.togglePlayPause()
-    fun nextTrack() { if (player?.hasNextMediaItem() == true) player!!.seekToNextMediaItem() }
-    fun prevTrack() { if (player?.hasPreviousMediaItem() == true) player!!.seekToPreviousMediaItem() }
+    // Позицию текущей серии сохраняем до перехода: иначе она запишется только при паузе/выходе
+    fun nextTrack() { if (player?.hasNextMediaItem() == true) { saveCurrentSettings(); player!!.seekToNextMediaItem() } }
+    fun prevTrack() { if (player?.hasPreviousMediaItem() == true) { saveCurrentSettings(); player!!.seekToPreviousMediaItem() } }
 
     fun setPlaybackSpeed(speed: Float) {
         speedFromDefault = false
@@ -1262,6 +1300,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         pendingExternalPosition = null
         sessionAudioSignature = null // Новый плейлист - выбор дорожки начинается заново
         isFirstItemLoaded = false // Продолжение просмотра - для первого элемента нового плейлиста
+        resumeCheckedItemId = null
         if (startItem != null && startPos > 0 &&
             repository.getExternalPositionMode() == SettingsRepository.EXTERNAL_POSITION_ASK
         ) {
@@ -1411,7 +1450,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun saveCurrentSettings() {
-        val uri = currentUri ?: return
+        val uri = settingsKeyFor(currentPlaylistItem(), currentUri) ?: return
         val p = player ?: return
         updateWatchHistory()
 
@@ -1775,6 +1814,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (isVideoError) p.seekTo(index, C.TIME_UNSET) // C.TIME_UNSET для Live означает "край"
             } else {
                 // Переключение на другой трек
+                saveCurrentSettings()
                 p.seekToDefaultPosition(index)
             }
             p.prepare() // На всякий случай

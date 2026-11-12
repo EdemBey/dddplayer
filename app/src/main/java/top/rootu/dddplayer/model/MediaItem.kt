@@ -18,6 +18,11 @@ data class MediaItem(
     val urlQualities: List<UrlQuality> = emptyList(),
     // Адрес, из которого можно получить качества для этой серии (Naruto Based based API)
     val qualitySourceUrl: String? = null,
+    // Стабильный ключ серии от приложения (X-DDD-Item-Keys): позиция и настройки
+    // хранятся по нему, а не по URL, если ссылки подписаны и меняются
+    val resumeKey: String? = null,
+    // Позиция, известная приложению (X-DDD-Positions), если своей сохраненной нет
+    val knownPositionMs: Long = 0,
     // Уникальный ID для DiffUtil, генерируется автоматически при создании объекта
     val uuid: String = UUID.randomUUID().toString()
 )

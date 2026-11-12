@@ -20,6 +20,8 @@ object IntentUtils {
 
     const val QUALITY_HEADER = "X-DDD-Quality"
     const val QUALITY_SOURCES_HEADER = "X-DDD-Quality-Sources"
+    const val ITEM_KEYS_HEADER = "X-DDD-Item-Keys"
+    const val POSITIONS_HEADER = "X-DDD-Positions"
 
     // Внутренние ключи стартового экрана (FileBrowserActivity -> PlayerActivity), внешним приложениям не нужны
     const val EXTRA_HISTORY_KIND = "top.rootu.dddplayer.history_kind"
@@ -94,7 +96,9 @@ object IntentUtils {
             // Если субтитры не переданы, ищем рядом с файлом (movie.mkv -> movie.srt)
             subtitles = singleSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
             startPositionMs = startPosition,
-            urlQualities = urlQualities
+            urlQualities = urlQualities,
+            resumeKey = parseItemKeys(headers)[0],
+            knownPositionMs = parseItemPositions(headers)[0] ?: 0L
         )
 
         // A single URL may point at an M3U list; keep the caller's start index
@@ -115,6 +119,9 @@ object IntentUtils {
         val headers = parseHeaders(extras)
         val urlQualities = parseUrlQualities(extras).ifEmpty { parseUrlQualitiesFromHeaders(headers) }
         val qualitySources = parseQualitySources(headers)
+        val inlineQualities = parseInlineQualitySources(headers)
+        val itemKeys = parseItemKeys(headers)
+        val itemPositions = parseItemPositions(headers)
         val cleanHeaders = stripQualityHeaders(headers)
 
         val playlist = mutableListOf<MediaItem>()
@@ -149,7 +156,10 @@ object IntentUtils {
                     headers = cleanHeaders,
                     subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri, listDir) },
                     startPositionMs = pos,
-                    qualitySourceUrl = qualitySources[i]
+                    urlQualities = inlineQualities[i] ?: emptyList(),
+                    qualitySourceUrl = qualitySources[i],
+                    resumeKey = itemKeys[i],
+                    knownPositionMs = itemPositions[i] ?: 0L
                 )
             )
         }
@@ -212,8 +222,48 @@ object IntentUtils {
     private fun stripQualityHeaders(headers: Map<String, String>): Map<String, String> {
         return headers.filterKeys {
             !it.equals(QUALITY_HEADER, ignoreCase = true) &&
-                !it.equals(QUALITY_SOURCES_HEADER, ignoreCase = true)
+                !it.equals(QUALITY_SOURCES_HEADER, ignoreCase = true) &&
+                !it.equals(ITEM_KEYS_HEADER, ignoreCase = true) &&
+                !it.equals(POSITIONS_HEADER, ignoreCase = true)
         }
+    }
+
+    private fun headerJson(headers: Map<String, String>, name: String): JSONObject? {
+        val raw = headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value ?: return null
+        return try {
+            JSONObject(raw)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /** X-DDD-Item-Keys: {"0":"rezka:10877:56:1:1", ...} — индекс в video_list -> стабильный ключ. */
+    private fun parseItemKeys(headers: Map<String, String>): Map<Int, String> {
+        val obj = headerJson(headers, ITEM_KEYS_HEADER) ?: return emptyMap()
+        val result = mutableMapOf<Int, String>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val index = key.toIntOrNull() ?: continue
+            val value = obj.optString(key, "")
+            if (value.isNotBlank()) result[index] = value
+        }
+        return result
+    }
+
+    /** X-DDD-Positions: {"1":734000, ...} — индекс в video_list -> позиция в мс. */
+    private fun parseItemPositions(headers: Map<String, String>): Map<Int, Long> {
+        val obj = headerJson(headers, POSITIONS_HEADER) ?: return emptyMap()
+        val result = mutableMapOf<Int, Long>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val index = key.toIntOrNull() ?: continue
+            val value = obj.optLong(key, 0L)
+            if (value > 0) result[index] = value
+        }
+        return result
     }
 
     /**
@@ -235,8 +285,39 @@ object IntentUtils {
             while (keys.hasNext()) {
                 val key = keys.next()
                 val index = key.toIntOrNull() ?: continue
-                val value = obj.optString(key, "")
+                // Inline lists are handled by parseInlineQualitySources
+                val value = obj.opt(key) as? String ?: continue
                 if (value.isNotBlank()) result[index] = value
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return result
+    }
+
+    /**
+     * Готовые качества серий из того же заголовка: значение — массив
+     * [{"name":"1080p","url":"..."}] вместо адреса. Так плагин передаёт уже
+     * разрешённые плейлисты (например, HDrezka), где запрашивать нечего.
+     */
+    private fun parseInlineQualitySources(headers: Map<String, String>): Map<Int, List<UrlQuality>> {
+        val raw = headers.entries
+            .firstOrNull { it.key.equals(QUALITY_SOURCES_HEADER, ignoreCase = true) }
+            ?.value
+            ?: return emptyMap()
+
+        val result = mutableMapOf<Int, List<UrlQuality>>()
+
+        try {
+            val obj = JSONObject(raw)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val index = key.toIntOrNull() ?: continue
+                val value = obj.opt(key) as? JSONArray ?: continue
+                val list = parseUrlQualitiesJson(value.toString())
+                if (list.isNotEmpty()) result[index] = list
             }
         } catch (e: Exception) {
             e.printStackTrace()
