@@ -766,7 +766,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         player?.let { p ->
             val title = mediaItem?.mediaMetadata?.title?.toString()
             currentUri = mediaItem?.localConfiguration?.uri?.toString()
-            loadChapters(currentUri)
             _videoTitle.value = title ?: mediaItem?.localConfiguration?.uri?.lastPathSegment
 
             _hasPrevious.value = p.hasPreviousMediaItem()
@@ -775,6 +774,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             _currentWindowIndex.value = p.currentMediaItemIndex
 
             val currentItem = _currentPlaylist.value?.find { it.uuid == mediaItem?.mediaId }
+            // Главы режутся из того же файла: без его заголовков подписанная ссылка отдаст 401/403
+            loadChapters(currentUri, currentItem?.headers.orEmpty())
             val urlQualities = currentItem?.urlQualities ?: emptyList()
             _urlQualityOptions.value = urlQualities
             _currentQualityName.value = urlQualities.firstOrNull { it.url == currentUri }?.name ?: "Auto"
@@ -1295,7 +1296,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         resumePlayWhenReady = true // Новый плейлист всегда стартует
         val startItem = indexedItems.getOrNull(startIndex)
-        loadChapters(startItem?.uri?.toString())
+        loadChapters(startItem?.uri?.toString(), startItem?.headers.orEmpty())
         var startPos = startItem?.startPositionMs ?: 0L
         pendingExternalPosition = null
         sessionAudioSignature = null // Новый плейлист - выбор дорожки начинается заново
@@ -1611,7 +1612,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /** Reads chapters from the container header; media3 exposes none. */
-    private fun loadChapters(uri: String?) {
+    private fun loadChapters(uri: String?, headers: Map<String, String> = emptyMap()) {
         if (uri.isNullOrBlank()) {
             chaptersJob?.cancel()
             pendingChaptersUri = null
@@ -1645,7 +1646,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
             val list = withContext(Dispatchers.IO) {
                 val started = SystemClock.elapsedRealtime()
-                val loaded = runCatching { chapterLoader.load(uri) }
+                val flatHeaders = headers.flatMap { listOf(it.key, it.value) }
+                val loaded = runCatching { chapterLoader.load(uri, flatHeaders) }
                     .onFailure { Log.e("ChapterLoader", "chapter load failed", it) }
                     .getOrDefault(emptyList())
                 Log.d(
