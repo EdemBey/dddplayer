@@ -17,7 +17,7 @@ class UrlQualityLoaderTest {
     """.trimIndent()
 
     @Test
-    fun `keeps 1080p and takes real lower qualities from another provider`() {
+    fun `keeps dzen variants and skips labels another provider already covers`() {
         val json = body(
             """
             {"provider":"Dzen","quality":"1080p","src":"/api/player/proxy?src=https%3A%2F%2Fdzen%2Fv"},
@@ -30,14 +30,14 @@ class UrlQualityLoaderTest {
 
         val qualities = loader.parse(descriptor, json)
 
-        // Same Dzen file under different labels collapses to one entry,
-        // 1080p stays first and lower qualities come from Allvideo.
+        // Обе подписи Dzen — разные URL, поэтому остаются обе.
+        // Allvideo даёт только не занятую 360p.
         assertEquals(listOf("1080p", "720p", "360p"), qualities.map { it.name })
         assertTrue(qualities[0].url.contains("dzen"))
-        assertTrue(qualities[1].url.contains("allvideo"))
+        assertTrue(qualities[1].url.contains("dzen"))
         assertEquals(
-            "https://anime.example/api/player/proxy?src=https%3A%2F%2Fallvideo%2F720",
-            qualities[1].url
+            "https://anime.example/api/player/proxy?src=https%3A%2F%2Fallvideo%2F360",
+            qualities[2].url
         )
     }
 
