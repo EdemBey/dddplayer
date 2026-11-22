@@ -65,6 +65,10 @@ class AudioOverlay(
         overlays.clear()
         items.forEach { item -> item.endingOverlay?.let { overlays[item.uuid] = it } }
         reset()
+        // Пересоздаем плеер музыки, чтобы не было наложения двух дорожек
+        // при переходе на следующую серию.
+        overlayPlayer?.release()
+        overlayPlayer = null
         if (overlays.isNotEmpty() && !released) handler.postDelayed(ticker, TICK_MS)
     }
 
@@ -108,16 +112,32 @@ class AudioOverlay(
             player.seekTo(offset)
         }
         player.playWhenReady = true
-        // shortcut: громкость глушит только декодируемый звук; при passthrough
-        // (AC3/DTS) основной плеер останется слышен, тогда нужен отдельный трек-мут.
-        main.volume = 0f
-        mainMuted = true
+        // Глушим основной плеер отключением аудиодорожки: это работает и при
+        // passthrough, в отличие от volume=0.
+        try {
+            main.trackSelectionParameters = main.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                .build()
+            mainMuted = true
+        } catch (e: Exception) {
+            main.volume = 0f
+            mainMuted = true
+        }
     }
 
     private fun restore() {
         if (overlayPlayer?.playWhenReady == true) overlayPlayer?.playWhenReady = false
         if (mainMuted) {
-            main.volume = 1f
+            // Возвращаем аудиодорожку основного плеера.
+            try {
+                main.trackSelectionParameters = main.trackSelectionParameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                    .build()
+            } catch (e: Exception) {
+                main.volume = 1f
+            }
             mainMuted = false
         }
     }
