@@ -258,4 +258,29 @@ class IntentUtilsTest {
             assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
         }
     }
+
+    @Test
+    fun `audio overlay header is parsed per item and not sent to the server`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Audio-Overlay",
+                    """{"0":{"music":"http://example.com/ed.m4a","segments":"http://example.com/skip?malId=1&episode=1"},"1":{"music":"http://example.com/ed.m4a"}}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals("http://example.com/ed.m4a", items[0].endingOverlay?.musicUrl)
+        assertEquals("http://example.com/skip?malId=1&episode=1", items[0].endingOverlay?.segmentsUrl)
+        // Без адреса участков подменять нечего
+        assertEquals(null, items[1].endingOverlay)
+        items.forEach { item ->
+            assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
+        }
+    }
 }

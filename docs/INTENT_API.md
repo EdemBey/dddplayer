@@ -89,6 +89,14 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 
 Оба заголовка удаляются из headers.
 
+### Подмена звука на участке видео
+
+- `X-DDD-Audio-Overlay` — `{"0":{"music":"https://.../ending.m4a","segments":"https://.../skip-times?malId=1&episode=2"}}`:
+  «индекс элемента в `video_list`» → музыка и адрес участков (`MediaItem.endingOverlay`). Плеер сам добавляет к адресу
+  `duration=<секунды>`, разбирает ответ `{"data":[{"type":"ed","startTime":..,"endTime":..}]}` и на эндинге глушит
+  видео, проигрывая музыку синхронно с позицией, паузой и перемоткой. Участки короче 87 секунд и участки кроме `ed`
+  игнорируются, замена не длиннее 90 секунд. Заголовок удаляется из headers.
+
 Массивы строк читает `getSmartStringArray`: подходят `String[]`, `ArrayList<String>`, `CharSequence[]`
 и `ArrayList<CharSequence>`.
 

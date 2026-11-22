@@ -11,6 +11,7 @@ import android.provider.OpenableColumns
 import androidx.core.net.toUri
 import org.json.JSONArray
 import org.json.JSONObject
+import top.rootu.dddplayer.model.EndingOverlay
 import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.SubtitleItem
@@ -22,6 +23,7 @@ object IntentUtils {
     const val QUALITY_SOURCES_HEADER = "X-DDD-Quality-Sources"
     const val ITEM_KEYS_HEADER = "X-DDD-Item-Keys"
     const val POSITIONS_HEADER = "X-DDD-Positions"
+    const val AUDIO_OVERLAY_HEADER = "X-DDD-Audio-Overlay"
 
     // Внутренние ключи стартового экрана (FileBrowserActivity -> PlayerActivity), внешним приложениям не нужны
     const val EXTRA_HISTORY_KIND = "top.rootu.dddplayer.history_kind"
@@ -86,6 +88,7 @@ object IntentUtils {
 
         val headers = parseHeaders(extras)
         val urlQualities = parseUrlQualities(extras).ifEmpty { parseUrlQualitiesFromHeaders(headers) }
+        val audioOverlays = parseAudioOverlays(headers)
 
         val item = MediaItem(
             uri = uri,
@@ -98,7 +101,8 @@ object IntentUtils {
             startPositionMs = startPosition,
             urlQualities = urlQualities,
             resumeKey = parseItemKeys(headers)[0],
-            knownPositionMs = parseItemPositions(headers)[0] ?: 0L
+            knownPositionMs = parseItemPositions(headers)[0] ?: 0L,
+            endingOverlay = audioOverlays[0]
         )
 
         // A single URL may point at an M3U list; keep the caller's start index
@@ -122,6 +126,7 @@ object IntentUtils {
         val inlineQualities = parseInlineQualitySources(headers)
         val itemKeys = parseItemKeys(headers)
         val itemPositions = parseItemPositions(headers)
+        val audioOverlays = parseAudioOverlays(headers)
         val cleanHeaders = stripQualityHeaders(headers)
 
         val playlist = mutableListOf<MediaItem>()
@@ -159,7 +164,8 @@ object IntentUtils {
                     urlQualities = inlineQualities[i] ?: emptyList(),
                     qualitySourceUrl = qualitySources[i],
                     resumeKey = itemKeys[i],
-                    knownPositionMs = itemPositions[i] ?: 0L
+                    knownPositionMs = itemPositions[i] ?: 0L,
+                    endingOverlay = audioOverlays[i]
                 )
             )
         }
@@ -224,7 +230,8 @@ object IntentUtils {
             !it.equals(QUALITY_HEADER, ignoreCase = true) &&
                 !it.equals(QUALITY_SOURCES_HEADER, ignoreCase = true) &&
                 !it.equals(ITEM_KEYS_HEADER, ignoreCase = true) &&
-                !it.equals(POSITIONS_HEADER, ignoreCase = true)
+                !it.equals(POSITIONS_HEADER, ignoreCase = true) &&
+                !it.equals(AUDIO_OVERLAY_HEADER, ignoreCase = true)
         }
     }
 
@@ -262,6 +269,27 @@ object IntentUtils {
             val index = key.toIntOrNull() ?: continue
             val value = obj.optLong(key, 0L)
             if (value > 0) result[index] = value
+        }
+        return result
+    }
+
+    /**
+     * X-DDD-Audio-Overlay: {"0":{"music":"https://.../ending.m4a","segments":"https://.../skip-times?malId=1&episode=2"}}
+     * — музыка на участок видео для каждого элемента плейлиста.
+     */
+    private fun parseAudioOverlays(headers: Map<String, String>): Map<Int, EndingOverlay> {
+        val obj = headerJson(headers, AUDIO_OVERLAY_HEADER) ?: return emptyMap()
+        val result = mutableMapOf<Int, EndingOverlay>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val index = key.toIntOrNull() ?: continue
+            val value = obj.optJSONObject(key) ?: continue
+            val music = value.optString("music", "")
+            val segments = value.optString("segments", "")
+            if (music.isNotBlank() && segments.isNotBlank()) {
+                result[index] = EndingOverlay(music, segments)
+            }
         }
         return result
     }

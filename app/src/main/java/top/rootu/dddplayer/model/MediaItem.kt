@@ -23,8 +23,19 @@ data class MediaItem(
     val resumeKey: String? = null,
     // Позиция, известная приложению (X-DDD-Positions), если своей сохраненной нет
     val knownPositionMs: Long = 0,
+    // Подмена звука на участке видео (X-DDD-Audio-Overlay)
+    val endingOverlay: EndingOverlay? = null,
     // Уникальный ID для DiffUtil, генерируется автоматически при создании объекта
     val uuid: String = UUID.randomUUID().toString()
+)
+
+/**
+ * Музыка на участок видео: приложение отдает ссылку на аудио и адрес,
+ * который по длительности видео возвращает участки (X-DDD-Audio-Overlay).
+ */
+data class EndingOverlay(
+    val musicUrl: String,
+    val segmentsUrl: String
 )
 
 data class UrlQuality(

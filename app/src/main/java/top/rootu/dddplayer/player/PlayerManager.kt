@@ -114,6 +114,8 @@ class PlayerManager(
     // Заголовки (Referer, Cookie, User-Agent и т.п.) каждого видео по mediaId: у элементов плейлиста они свои
     private var headersByMediaId: Map<String, Map<String, String>> = emptyMap()
     private var playWhenReady = true
+    // Подмена звука на участке видео (эндинг) для элементов с X-DDD-Audio-Overlay
+    private var audioOverlay: AudioOverlay? = null
 
     // Пишется из IO-потока парсера, читается из потоков загрузки и главного потока
     @Volatile
@@ -610,8 +612,7 @@ class PlayerManager(
         })
 
         this.exoPlayer = player
-
-        // 6. Restore State
+        this.audioOverlay = AudioOverlay(appContext, player, okHttpClient)
         if (currentMediaItems.isNotEmpty()) {
             val sources = buildMediaSources(currentMediaItems)
             player.setMediaSources(sources, currentWindowIndex, currentPosition)
@@ -877,6 +878,7 @@ class PlayerManager(
      */
     fun reloadPlaylistItems(items: List<MediaItem>, index: Int, positionMs: Long) {
         headersByMediaId = items.associate { it.uuid to it.headers }
+        audioOverlay?.setItems(items)
         reloadMediaItems(items.map { buildExoItem(it) }, index, positionMs)
     }
 
@@ -888,6 +890,7 @@ class PlayerManager(
 
         val safeStartIndex = if (items.isEmpty()) 0 else startIndex.coerceIn(0, items.lastIndex)
         headersByMediaId = items.associate { it.uuid to it.headers }
+        audioOverlay?.setItems(items)
 
         val exoItems = items.map { buildExoItem(it) }
 
@@ -935,6 +938,8 @@ class PlayerManager(
         }
         mediaSession?.release()
         mediaSession = null
+        audioOverlay?.release()
+        audioOverlay = null
         loudnessEnhancer?.release()
         loudnessEnhancer = null
         exoPlayer = null
