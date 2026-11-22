@@ -37,7 +37,7 @@ class AudioOverlay(
     private companion object {
         const val TAG = "AudioOverlay"
         const val TICK_MS = 250L
-        const val SYNC_TOLERANCE_MS = 300L
+        const val SYNC_TOLERANCE_MS = 1000L
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -108,36 +108,39 @@ class AudioOverlay(
         // Музыка не готова или короче участка — не глушим видео.
         if (!ready || (player.duration > 0 && offset >= player.duration)) return restore()
 
+        // Скорость воспроизведения должна совпадать с основным плеером,
+        // иначе на 2x музыка отстает и тикер дергает seekTo -> пердит.
+        val speed = main.playbackParameters.speed
+        if (speed > 0 && abs(player.playbackParameters.speed - speed) > 0.01f) {
+            player.setPlaybackSpeed(speed)
+        }
         if (player.playbackState == Player.STATE_ENDED || abs(player.currentPosition - offset) > SYNC_TOLERANCE_MS) {
             player.seekTo(offset)
         }
         player.playWhenReady = true
-        // Глушим основной плеер отключением аудиодорожки: это работает и при
-        // passthrough, в отличие от volume=0.
+        // Глушим основной плеер и громкостью (мгновенно), и отключением
+        // аудиодорожки (на случай passthrough, где volume=0 не работает).
+        main.volume = 0f
         try {
             main.trackSelectionParameters = main.trackSelectionParameters
                 .buildUpon()
                 .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
                 .build()
-            mainMuted = true
-        } catch (e: Exception) {
-            main.volume = 0f
-            mainMuted = true
-        }
+        } catch (e: Exception) {}
+        mainMuted = true
     }
 
     private fun restore() {
         if (overlayPlayer?.playWhenReady == true) overlayPlayer?.playWhenReady = false
         if (mainMuted) {
             // Возвращаем аудиодорожку основного плеера.
+            main.volume = 1f
             try {
                 main.trackSelectionParameters = main.trackSelectionParameters
                     .buildUpon()
                     .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
                     .build()
-            } catch (e: Exception) {
-                main.volume = 1f
-            }
+            } catch (e: Exception) {}
             mainMuted = false
         }
     }
