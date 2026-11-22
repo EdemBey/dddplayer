@@ -97,6 +97,14 @@ class AudioOverlay(
         val key = "${item.mediaId}:$duration"
         if (key != segmentsKey && key != loadingKey) loadSegments(overlay, key, duration)
 
+        // Подгружаем музыку за 10 секунд до начала эндинга, чтобы к моменту
+        // старта она уже была декодирована и не пердела при входе.
+        val nextEnding = segments.filter { it.type == "ed" && it.endMs - it.startMs >= 87000 }
+            .firstOrNull { main.currentPosition < it.startMs && main.currentPosition >= it.startMs - 10000 }
+        if (nextEnding != null && overlay != null) {
+            prepareMusic(overlay)
+        }
+
         val segment = EndingOverlayLogic.active(segments, main.currentPosition)
         if (failed || segment == null) return restore()
         // Пауза, буферизация и конец видео: музыка тоже молчит.
