@@ -44,7 +44,9 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
             val savedJson = repository.getLastUpdateInfo()
             if (savedJson != null) {
                 val savedInfo = updateManager.fromJson(savedJson)
-                if (savedInfo != null && updateManager.isNewer(savedInfo.version, currentVersion)) {
+                if (savedInfo != null && updateManager.isOwnRelease(savedInfo) &&
+                    updateManager.isNewer(savedInfo.version, currentVersion)
+                ) {
                     _updateInfo.postValue(savedInfo)
                     hasUpdate = true
                 } else {

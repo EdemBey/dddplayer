@@ -24,7 +24,7 @@ data class UpdateInfo(
 class UpdateManager(private val context: Context) {
 
     private val client = OkHttpClient()
-    private val repoUrl = "https://api.github.com/repos/usmanec/dddplayer/releases"
+    private val repoUrl = "https://api.github.com/repos/$REPO/releases"
 
     /**
      * Возвращает информацию о более новом релизе или null, если обновлений нет.
@@ -151,14 +151,18 @@ class UpdateManager(private val context: Context) {
     }
 
     /**
-     * Сравнивает версии вида "v1.2.3" с текущей версией сборки, которая может иметь
-     * суффиксы от git describe ("1.2.3-5-gabcdef", "1.2.3-dirty", "0.0.1-dev-abcdef").
-     * Сравниваются только числовые компоненты, поэтому сборка после тега
-     * не считается старше этого тега, а откат на старый релиз не предлагается.
+     * Сравнивает тег релиза с текущей версией сборки (git describe, без префикса "v").
+     * Сборка с этого же тега ("tag", "tag-5-gabcdef", "tag-dirty") обновлением не считается.
+     * Числовые теги сравниваются по компонентам, чтобы не предлагать откат.
+     * Именные теги (например, "jojo-adhd-edition") считаются новее, если отличаются от текущего.
      */
     fun isNewer(remote: String, current: String): Boolean {
-        val r = parseVersion(remote) ?: return false
-        val c = parseVersion(current) ?: return true
+        val tag = remote.trim().removePrefix("v")
+        val cur = current.trim().removePrefix("v").replace(DESCRIBE_SUFFIX, "")
+        if (cur == tag) return false
+        if (!NUMERIC.matches(tag) || !NUMERIC.matches(cur)) return true
+        val r = parseVersion(tag) ?: return true
+        val c = parseVersion(cur) ?: return true
         for (i in 0 until maxOf(r.size, c.size)) {
             val diff = r.getOrElse(i) { 0 } - c.getOrElse(i) { 0 }
             if (diff != 0) return diff > 0
@@ -166,12 +170,19 @@ class UpdateManager(private val context: Context) {
         return false
     }
 
+    /** Кэш мог остаться от оригинального репозитория: принимаем только свои релизы. */
+    fun isOwnRelease(info: UpdateInfo): Boolean =
+        info.downloadUrl.startsWith("https://github.com/$REPO/")
+
     private fun parseVersion(version: String): List<Int>? {
         val match = VERSION_REGEX.find(version.trim().removePrefix("v")) ?: return null
         return match.value.split('.').map { it.toIntOrNull() ?: 0 }
     }
 
     private companion object {
+        const val REPO = "EdemBey/dddplayer"
+        val NUMERIC = Regex("""^\d+(\.\d+)*$""")
+        val DESCRIBE_SUFFIX = Regex("""(-\d+-g[0-9a-f]+)?(-dirty)?$""")
         val VERSION_REGEX = Regex("""^\d+(\.\d+)*""")
     }
 }
