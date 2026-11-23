@@ -95,6 +95,7 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
                     repository.saveUpdateInfo(updateManager.toJson(info))
                     _toastMessage.postValue(getString(R.string.update_found, info.version))
                 } else {
+                    updateManager.deleteUpdateFile()
                     repository.saveUpdateInfo(null)
                     _updateInfo.postValue(null)
                     _toastMessage.postValue(getString(R.string.update_latest))

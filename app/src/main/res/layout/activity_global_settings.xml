@@ -1291,6 +1291,34 @@
                         app:tint="@color/selector_settings_secondary" />
                 </LinearLayout>
 
+                <!-- Проверка обновлений: видна, пока висит найденное обновление -->
+                <LinearLayout
+                    android:id="@+id/item_update_check"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_update_check"
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/update_btn_check" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/update_btn_check"
+                        android:duplicateParentState="true"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/selector_settings_secondary" />
+                </LinearLayout>
+
                 <!-- Диагностика устройства -->
                 <LinearLayout android:id="@+id/item_diagnostics" style="@style/SettingsItemContainer">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">

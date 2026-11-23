@@ -145,7 +145,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemSwipeAction: LinearLayout
     private lateinit var textSwipeActionValue: TextView
     private lateinit var itemUpdate: LinearLayout
+    private lateinit var itemUpdateCheck: LinearLayout
     private lateinit var textUpdate: TextView
+    private lateinit var textUpdateCheck: TextView
     private lateinit var textUpdateDesc: TextView
     private lateinit var itemAppLanguage: LinearLayout
     private lateinit var textAppLanguageValue: TextView
@@ -412,7 +414,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemSwipeAction = findViewById(R.id.item_swipe_action)
         textSwipeActionValue = findViewById(R.id.text_swipe_action_value)
         itemUpdate = findViewById(R.id.item_update)
+        itemUpdateCheck = findViewById(R.id.item_update_check)
         textUpdate = findViewById(R.id.text_update)
+        textUpdateCheck = findViewById(R.id.text_update_check)
         textUpdateDesc = findViewById(R.id.text_update_desc)
         itemAppLanguage = findViewById(R.id.item_app_language)
         textAppLanguageValue = findViewById(R.id.text_app_language_value)
@@ -663,6 +667,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 updateViewModel.forceCheckUpdates()
             }
         }
+        // Перепроверка, даже если уже найдено обновление (оно могло устареть)
+        itemUpdateCheck.setOnClickListener { updateViewModel.forceCheckUpdates() }
 
         itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
         itemSubtitleAuto.setOnClickListener {
@@ -909,7 +915,12 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         updateViewModel.updateInfo.observe(this) { updateUpdateUI() }
         updateViewModel.isCheckingUpdates.observe(this) { checking ->
-            if (checking) textUpdateDesc.text = getString(R.string.update_btn_checking) else updateUpdateUI()
+            if (checking) {
+                textUpdateDesc.text = getString(R.string.update_btn_checking)
+                textUpdateCheck.text = getString(R.string.update_btn_checking)
+            } else {
+                updateUpdateUI()
+            }
         }
         updateViewModel.downloadProgress.observe(this) { updateDownloadProgress(it) }
     }
@@ -1173,6 +1184,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textUpdate.text = getString(R.string.update_btn_check)
         }
         textUpdateDesc.text = getString(R.string.update_current_version, BuildConfig.VERSION_NAME)
+        // Строка прячется, пока в ней фокус: переводим фокус на пункт обновления выше
+        if (info == null && itemUpdateCheck.hasFocus()) itemUpdate.requestFocus()
+        itemUpdateCheck.visibility = if (info != null) View.VISIBLE else View.GONE
+        textUpdateCheck.text = getString(R.string.update_btn_check)
     }
 
     private fun showAudioMixDialog() {
