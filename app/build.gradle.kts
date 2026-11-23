@@ -19,6 +19,11 @@ val gitVersionCode: Int by lazy {
 }
 
 val gitVersionName: String by lazy {
+    // В CI релиз собирается с тега: берем его, ведь на одном коммите может быть несколько тегов
+    if (System.getenv("GITHUB_REF_TYPE") == "tag") {
+        System.getenv("GITHUB_REF_NAME")?.takeIf { it.isNotBlank() }
+            ?.let { return@lazy it.replaceFirst("^v".toRegex(), "") }
+    }
     val output = getGitOutput("git", "describe", "--tags", "--dirty")
 
     // Если тегов нет (ошибка fatal или пусто), берем короткий хеш коммита
