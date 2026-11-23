@@ -24,6 +24,7 @@ object IntentUtils {
     const val ITEM_KEYS_HEADER = "X-DDD-Item-Keys"
     const val POSITIONS_HEADER = "X-DDD-Positions"
     const val AUDIO_OVERLAY_HEADER = "X-DDD-Audio-Overlay"
+    const val VOICEOVER_PATH_HEADER = "X-DDD-Voiceover-Path"
 
     // Внутренние ключи стартового экрана (FileBrowserActivity -> PlayerActivity), внешним приложениям не нужны
     const val EXTRA_HISTORY_KIND = "top.rootu.dddplayer.history_kind"
@@ -100,6 +101,7 @@ object IntentUtils {
             subtitles = singleSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
             startPositionMs = startPosition,
             urlQualities = urlQualities,
+            voiceoverSourceUrl = voiceoverSourceUrl(headers, uri),
             resumeKey = parseItemKeys(headers)[0],
             knownPositionMs = parseItemPositions(headers)[0] ?: 0L,
             endingOverlay = audioOverlays[0]
@@ -163,6 +165,7 @@ object IntentUtils {
                     startPositionMs = pos,
                     urlQualities = inlineQualities[i] ?: emptyList(),
                     qualitySourceUrl = qualitySources[i],
+                    voiceoverSourceUrl = voiceoverSourceUrl(headers, uri),
                     resumeKey = itemKeys[i],
                     knownPositionMs = itemPositions[i] ?: 0L,
                     endingOverlay = audioOverlays[i]
@@ -231,7 +234,8 @@ object IntentUtils {
                 !it.equals(QUALITY_SOURCES_HEADER, ignoreCase = true) &&
                 !it.equals(ITEM_KEYS_HEADER, ignoreCase = true) &&
                 !it.equals(POSITIONS_HEADER, ignoreCase = true) &&
-                !it.equals(AUDIO_OVERLAY_HEADER, ignoreCase = true)
+                !it.equals(AUDIO_OVERLAY_HEADER, ignoreCase = true) &&
+                !it.equals(VOICEOVER_PATH_HEADER, ignoreCase = true)
         }
     }
 
@@ -243,6 +247,19 @@ object IntentUtils {
             e.printStackTrace()
             null
         }
+    }
+
+    /**
+     * X-DDD-Voiceover-Path: /voiceovers — озвучки серии отдает адрес самой серии с этим путем
+     * (query остается прежним). Заголовок один на весь плейлист и не зависит от индексов:
+     * Lampa Android может передать и весь список, и одну серию из него.
+     */
+    private fun voiceoverSourceUrl(headers: Map<String, String>, uri: Uri): String? {
+        val path = headers.entries.firstOrNull { it.key.equals(VOICEOVER_PATH_HEADER, ignoreCase = true) }?.value
+        if (path.isNullOrBlank() || !path.startsWith("/")) return null
+        if (uri.scheme != "http" && uri.scheme != "https") return null
+        // Путь приходит таким, каким стоит в адресе, то есть уже закодированным
+        return uri.buildUpon().encodedPath(path).build().toString()
     }
 
     /** X-DDD-Item-Keys: {"0":"rezka:10877:56:1:1", ...} — индекс в video_list -> стабильный ключ. */

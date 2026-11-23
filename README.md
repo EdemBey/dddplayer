@@ -140,6 +140,8 @@ To pass a playlist, use the `video_list` extra (ParcelableArray of URIs) along w
 
 If the calling app can only pass HTTP headers (for example, Lampa Android), use the `X-DDD-Quality` header with the same JSON. It is stripped before the video request.
 
+Voiceovers that are separate streams of the same video (the audio is muxed into the video, so it cannot be switched as a track) are passed with the `X-DDD-Voiceover-Path` header, for example `/voiceovers`: the voiceovers of an item are returned by the item's own URL with this path (the query stays the same). When there is more than one, the audio button lists them. The response format is described in [docs/INTENT_API.md](docs/INTENT_API.md).
+
 **Playlist Subtitles Structure:**
 The `video_list.subtitles` extra is an `ArrayList` where each `Bundle` corresponds to a video at the same index.
 Inside each Bundle:

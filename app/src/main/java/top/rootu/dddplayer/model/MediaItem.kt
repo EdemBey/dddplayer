@@ -18,6 +18,10 @@ data class MediaItem(
     val urlQualities: List<UrlQuality> = emptyList(),
     // Адрес, из которого можно получить качества для этой серии (Naruto Based based API)
     val qualitySourceUrl: String? = null,
+    // Адрес, из которого можно получить озвучки этой серии (X-DDD-Voiceover-Path)
+    val voiceoverSourceUrl: String? = null,
+    // Озвучки серии: у каждой свой поток и свои качества
+    val voiceovers: List<Voiceover> = emptyList(),
     // Стабильный ключ серии от приложения (X-DDD-Item-Keys): позиция и настройки
     // хранятся по нему, а не по URL, если ссылки подписаны и меняются
     val resumeKey: String? = null,
@@ -41,6 +45,18 @@ data class EndingOverlay(
 data class UrlQuality(
     val name: String,
     val url: String
+)
+
+/**
+ * Озвучка отдельным потоком того же видео: звук вшит в видео, дорожкой ее не переключить.
+ * id не меняется от серии к серии, по нему выбор переносится на следующие серии.
+ */
+data class Voiceover(
+    val id: String,
+    val name: String,
+    val url: String,
+    val selected: Boolean = false,
+    val qualities: List<UrlQuality> = emptyList()
 )
 
 data class SubtitleItem(

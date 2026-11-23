@@ -283,4 +283,61 @@ class IntentUtilsTest {
             assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
         }
     }
+
+    @Test
+    fun `voiceover path header gives every item its own address and is not sent to the server`() {
+        val streams = arrayOf(
+            Uri.parse("https://helper.example/play.m3u8?q=1080&url=https%3A%2F%2Fsite%2F%3Fepisode%3D1%26audio%3DA%2520B"),
+            Uri.parse("https://helper.example/stream.m3u8?url=https%3A%2F%2Fsite%2F%3Fepisode%3D2")
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = streams[1]
+            putExtra("video_list", streams)
+            putExtra("headers", arrayOf("X-DDD-Voiceover-Path", "/voiceovers"))
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        // Меняется только путь: query с закодированной ссылкой остается как был
+        assertEquals(
+            "https://helper.example/voiceovers?q=1080&url=https%3A%2F%2Fsite%2F%3Fepisode%3D1%26audio%3DA%2520B",
+            items[0].voiceoverSourceUrl
+        )
+        assertEquals(
+            "https://helper.example/voiceovers?url=https%3A%2F%2Fsite%2F%3Fepisode%3D2",
+            items[1].voiceoverSourceUrl
+        )
+        items.forEach { item ->
+            assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
+        }
+    }
+
+    @Test
+    fun `single file takes its voiceover address from the path header`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.parse("http://example.com/dir/video.m3u8?token=a%2Fb"), "video/*")
+            putExtra("headers", arrayOf("X-DDD-Voiceover-Path", "/api/voiceovers"))
+        }
+
+        val item = IntentUtils.parseIntent(context, intent).first.single()
+
+        assertEquals("http://example.com/api/voiceovers?token=a%2Fb", item.voiceoverSourceUrl)
+        assertTrue(item.headers.isEmpty())
+    }
+
+    @Test
+    fun `voiceover address is not built without the header, for a bad path or a local file`() {
+        fun source(uri: String, vararg headers: String): String? {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(Uri.parse(uri), "video/*")
+                if (headers.isNotEmpty()) putExtra("headers", arrayOf(*headers))
+            }
+            return IntentUtils.parseIntent(context, intent).first.single().voiceoverSourceUrl
+        }
+
+        assertEquals(null, source("http://example.com/video.mp4"))
+        assertEquals(null, source("http://example.com/video.mp4", "X-DDD-Voiceover-Path", "voiceovers"))
+        assertEquals(null, source("http://example.com/video.mp4", "X-DDD-Voiceover-Path", ""))
+        assertEquals(null, source("file:///sdcard/video.mp4", "X-DDD-Voiceover-Path", "/voiceovers"))
+    }
 }

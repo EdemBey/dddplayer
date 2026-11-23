@@ -8,6 +8,7 @@ import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import top.rootu.dddplayer.model.UrlQuality
+import top.rootu.dddplayer.model.Voiceover
 import java.util.concurrent.TimeUnit
 
 /**
@@ -52,19 +53,7 @@ class UrlQualityLoader {
 
         cache.get(descriptorUrl)?.let { return it }
 
-        val body = try {
-            val request = Request.Builder().url(descriptorUrl).get().build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    Log.d(TAG, "HTTP ${response.code} for $descriptorUrl")
-                    return emptyList()
-                }
-                response.body?.string().orEmpty()
-            }
-        } catch (e: Exception) {
-            Log.d(TAG, "request failed: ${e.message}")
-            return emptyList()
-        }
+        val body = fetch(descriptorUrl) ?: return emptyList()
 
         val qualities = try {
             parse(descriptorUrl, body)
@@ -76,6 +65,83 @@ class UrlQualityLoader {
         if (qualities.isNotEmpty()) cache.put(descriptorUrl, qualities)
         Log.d(TAG, "resolved ${qualities.size} qualities for $descriptorUrl")
         return qualities
+    }
+
+    private fun fetch(descriptorUrl: String): String? {
+        return try {
+            val request = Request.Builder().url(descriptorUrl).get().build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.d(TAG, "HTTP ${response.code} for $descriptorUrl")
+                    return null
+                }
+                response.body?.string().orEmpty()
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "request failed: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Озвучки серии по адресу из `X-DDD-Voiceover-Path`. Здесь не кэшируются:
+     * список хранится в самом элементе. При любой ошибке возвращает пустой список,
+     * тогда у серии просто нет выбора озвучки.
+     */
+    fun loadVoiceovers(descriptorUrl: String): List<Voiceover> {
+        if (descriptorUrl.isBlank()) return emptyList()
+
+        val body = fetch(descriptorUrl) ?: return emptyList()
+
+        return try {
+            parseVoiceovers(body)
+        } catch (e: Exception) {
+            Log.d(TAG, "voiceovers parse failed: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * {"voiceovers":[{"id":"..","name":"..","selected":true,"url":"https://..",
+     *   "qualities":[{"name":"1080p","url":"https://.."}]}]}
+     * Записи без названия или без http(s)-ссылки пропускаются, без `id` им служит название.
+     */
+    internal fun parseVoiceovers(body: String): List<Voiceover> {
+        val start = body.indexOf('{')
+        val end = body.lastIndexOf('}')
+        if (start == -1 || end <= start) return emptyList()
+
+        val list = JSONObject(body.substring(start, end + 1)).optJSONArray("voiceovers") ?: return emptyList()
+        val result = mutableListOf<Voiceover>()
+
+        for (i in 0 until list.length()) {
+            val entry = list.optJSONObject(i) ?: continue
+            val name = entry.optString("name")
+            val url = entry.optString("url")
+            if (name.isBlank() || !url.startsWith("http")) continue
+
+            val qualities = mutableListOf<UrlQuality>()
+            val array = entry.optJSONArray("qualities") ?: JSONArray()
+            for (j in 0 until array.length()) {
+                val quality = array.optJSONObject(j) ?: continue
+                val qualityUrl = quality.optString("url")
+                val qualityName = quality.optString("name")
+                if (qualityName.isBlank() || !qualityUrl.startsWith("http")) continue
+                qualities.add(UrlQuality(qualityName, qualityUrl))
+            }
+
+            result.add(
+                Voiceover(
+                    id = entry.optString("id").ifBlank { name },
+                    name = name,
+                    url = url,
+                    selected = entry.optBoolean("selected"),
+                    qualities = qualities
+                )
+            )
+        }
+
+        return result
     }
 
     internal fun parse(descriptorUrl: String, body: String): List<UrlQuality> {

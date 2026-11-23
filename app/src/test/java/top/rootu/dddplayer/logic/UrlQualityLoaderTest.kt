@@ -71,4 +71,36 @@ class UrlQualityLoaderTest {
         assertEquals(1, qualities.size)
         assertTrue(qualities.single().url.contains("dzen"))
     }
+
+    @Test
+    fun `voiceovers keep their own stream and quality list`() {
+        val json = """
+            {"voiceovers":[
+              {"id":"(English)","name":"(English) 9","selected":true,"url":"https://h.example/stream?a=en",
+               "qualities":[{"name":"1080p","url":"https://h.example/play?q=1080&a=en"},{"name":"720p","url":"https://h.example/play?q=720&a=en"},{"name":"480p"}]},
+              {"name":"LostFilm","url":"https://h.example/stream?a=lf"},
+              {"name":"","url":"https://h.example/unnamed"},
+              {"name":"No url"}
+            ]}
+        """.trimIndent()
+
+        val voiceovers = loader.parseVoiceovers(json)
+
+        assertEquals(listOf("(English) 9", "LostFilm"), voiceovers.map { it.name })
+        assertEquals("(English)", voiceovers[0].id)
+        assertTrue(voiceovers[0].selected)
+        assertEquals(listOf("1080p", "720p"), voiceovers[0].qualities.map { it.name })
+        // Без id озвучка опознается по названию
+        assertEquals("LostFilm", voiceovers[1].id)
+        assertTrue(!voiceovers[1].selected)
+        assertTrue(voiceovers[1].qualities.isEmpty())
+    }
+
+    @Test
+    fun `garbage voiceover responses return an empty list`() {
+        assertTrue(loader.parseVoiceovers("not json").isEmpty())
+        assertTrue(loader.parseVoiceovers("").isEmpty())
+        assertTrue(loader.parseVoiceovers("""{"voiceovers":[]}""").isEmpty())
+        assertTrue(loader.parseVoiceovers("""{"ok":true}""").isEmpty())
+    }
 }

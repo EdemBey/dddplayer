@@ -38,6 +38,8 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
@@ -48,6 +50,8 @@ import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.mp4.FragmentedMp4Extractor
+import androidx.media3.extractor.text.DefaultSubtitleParserFactory
+import androidx.media3.extractor.text.SubtitleExtractor
 import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
@@ -655,6 +659,7 @@ class PlayerManager(
         // Фабрики по набору заголовков: обычно он один на весь плейлист
         val hlsFactories = HashMap<Map<String, String>, HlsMediaSource.Factory>()
         val defaultFactories = HashMap<Map<String, String>, DefaultMediaSourceFactory>()
+        val subtitleParserFactory = DefaultSubtitleParserFactory()
 
         return exoItems.map { exoItem ->
             val headers = headersByMediaId[exoItem.mediaId].orEmpty()
@@ -665,11 +670,32 @@ class PlayerManager(
             val isHls = mimeType == MimeTypes.APPLICATION_M3U8
 
             if (isHls) {
-                hlsFactories.getOrPut(headers) {
+                val hlsSource = hlsFactories.getOrPut(headers) {
                     HlsMediaSource.Factory(createParsingDataSourceFactory(headers))
                         .setExtractorFactory(hlsExtractorFactory)
                         .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
                 }.createMediaSource(exoItem)
+                // HlsMediaSource.Factory, в отличие от DefaultMediaSourceFactory, не подключает внешние
+                // субтитры из MediaItem: добавляем их сами, как это делает DefaultMediaSourceFactory
+                val subSources = exoItem.localConfiguration?.subtitleConfigurations.orEmpty().mapNotNull { sub ->
+                    val format = Format.Builder()
+                        .setSampleMimeType(sub.mimeType)
+                        .setLanguage(sub.language)
+                        .setSelectionFlags(sub.selectionFlags)
+                        .setRoleFlags(sub.roleFlags)
+                        .setLabel(sub.label)
+                        .setId(sub.id)
+                        .build()
+                    // Формат, который ExoPlayer не умеет разбирать, пропускаем
+                    if (!subtitleParserFactory.supportsFormat(format)) return@mapNotNull null
+                    ProgressiveMediaSource.Factory(createParsingDataSourceFactory(headers), ExtractorsFactory {
+                        arrayOf<Extractor>(SubtitleExtractor(subtitleParserFactory.create(format), format))
+                    })
+                        .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+                        .createMediaSource(Media3MediaItem.fromUri(sub.uri))
+                }
+                if (subSources.isEmpty()) hlsSource
+                else MergingMediaSource(hlsSource, *subSources.toTypedArray())
             } else {
                 defaultFactories.getOrPut(headers) {
                     DefaultMediaSourceFactory(appContext, extractorsFactory)

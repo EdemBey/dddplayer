@@ -57,6 +57,7 @@ import top.rootu.dddplayer.logic.ChapterLogic
 import top.rootu.dddplayer.logic.HomeLogic
 import top.rootu.dddplayer.player.ChapterLoader
 import top.rootu.dddplayer.model.UrlQuality
+import top.rootu.dddplayer.model.Voiceover
 import top.rootu.dddplayer.player.PlayerManager
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.utils.MediaFormatHelper
@@ -190,6 +191,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val urlQualityLoader = UrlQualityLoader()
     private val qualitySourceRequests = mutableSetOf<String>()
     private var qualitySourceJob: kotlinx.coroutines.Job? = null
+    private val voiceoverRequests = mutableSetOf<String>()
+    // id озвучки, выбранной пользователем: переносится на следующие серии плейлиста
+    private var preferredVoiceoverId: String? = null
     private val _chapters = MutableLiveData<List<Chapter>>(emptyList())
     val chapters: LiveData<List<Chapter>> = _chapters
     private var chaptersJob: kotlinx.coroutines.Job? = null
@@ -239,6 +243,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // URL-качества текущего видео (Lampa quality map / ddd_quality из intent)
     private val _urlQualityOptions = MutableLiveData<List<UrlQuality>>(emptyList())
     val urlQualityOptions: LiveData<List<UrlQuality>> = _urlQualityOptions
+
+    // Озвучки текущего видео (X-DDD-Voiceover-Path): отдельные потоки, а не дорожки
+    private val _voiceoverOptions = MutableLiveData<List<Voiceover>>(emptyList())
+    val voiceoverOptions: LiveData<List<Voiceover>> = _voiceoverOptions
 
     /** Число дорожек видео/аудио/субтитров (без "Авто" и "Выкл") - для скрытия лишних кнопок панели */
     data class TrackCounts(val video: Int, val audio: Int, val subtitles: Int)
@@ -784,6 +792,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 currentItem?.qualitySourceUrl?.let { resolveUrlQualities(currentItem, it) }
             }
 
+            val voiceovers = currentItem?.voiceovers ?: emptyList()
+            _voiceoverOptions.value = voiceovers
+            if (voiceovers.isEmpty()) {
+                currentItem?.voiceoverSourceUrl?.let { resolveVoiceovers(currentItem, it) }
+            }
+
             isSettingsLoadedFromDb = false
             _inputType.value = StereoInputType.NONE
 
@@ -1283,6 +1297,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val initialItem = indexedItems.getOrNull(startIndex)
         _urlQualityOptions.value = initialItem?.urlQualities ?: emptyList()
         _currentQualityName.value = "Auto"
+        _voiceoverOptions.value = initialItem?.voiceovers ?: emptyList()
+        preferredVoiceoverId = null
 
         stopZap()
 
@@ -2201,6 +2217,95 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         currentUri = option.url
         isRecoveringFromError = true
         playerManager.reloadPlaylistItems(newPlaylist, p.currentMediaItemIndex, position)
+    }
+
+    /**
+     * Переключение озвучки: у каждой свой поток и свои качества. Позиция сохраняется,
+     * качество остается прежним, если оно есть у новой озвучки.
+     */
+    fun setVoiceover(chosen: Voiceover) {
+        val p = player ?: return
+        val playlist = _currentPlaylist.value ?: return
+        val playingId = p.currentMediaItem?.mediaId ?: return
+        val index = playlist.indexOfFirst { it.uuid == playingId }
+        if (index == -1) return
+
+        val item = playlist[index]
+        preferredVoiceoverId = chosen.id
+        // Озвучка берется из списка текущей серии: меню могло остаться открытым с предыдущей,
+        // а ее ссылки ведут на другую серию
+        val option = item.voiceovers.firstOrNull { it.name == chosen.name }
+            ?: item.voiceovers.firstOrNull { it.id == chosen.id }
+            ?: return
+        if (option.selected) return
+
+        val qualityName = item.urlQualities.firstOrNull { it.url == item.uri.toString() }?.name
+        val quality = option.qualities.firstOrNull { it.name == qualityName }
+        val position = p.currentPosition
+        val updated = item.copy(
+            uri = (quality?.url ?: option.url).toUri(),
+            startPositionMs = position,
+            // Прежнего качества у этой озвучки нет: играет ее ссылка по умолчанию, в меню она "Auto"
+            urlQualities = if (quality != null) option.qualities
+            else listOf(UrlQuality("Auto", option.url)) + option.qualities,
+            voiceovers = item.voiceovers.map { it.copy(selected = it.url == option.url) }
+        )
+        val newPlaylist = playlist.toMutableList().apply { set(index, updated) }
+
+        _currentPlaylist.value = newPlaylist
+        _playlistUiState.value?.let { state ->
+            _playlistUiState.value = state.copy(
+                items = state.items.map { if (it.uuid == updated.uuid) updated else it }
+            )
+        }
+
+        _urlQualityOptions.value = updated.urlQualities
+        _currentQualityName.value = quality?.name ?: "Auto"
+        _voiceoverOptions.value = updated.voiceovers
+
+        // Считаем это тем же видео: onMediaItemTransition не должен сбрасывать настройки.
+        currentUri = updated.uri.toString()
+        isRecoveringFromError = true
+        playerManager.reloadPlaylistItems(newPlaylist, p.currentMediaItemIndex, position)
+    }
+
+    /**
+     * Озвучки серии из плейлиста.
+     *
+     * Приложение передает только адрес (X-DDD-Voiceover-Path): список запрашивается,
+     * когда серия начинает играть, и дальше хранится в самом элементе.
+     */
+    private fun resolveVoiceovers(item: MediaItem, descriptorUrl: String) {
+        if (!voiceoverRequests.add(item.uuid)) return
+
+        viewModelScope.launch {
+            val voiceovers = withContext(Dispatchers.IO) { urlQualityLoader.loadVoiceovers(descriptorUrl) }
+            voiceoverRequests.remove(item.uuid)
+
+            if (voiceovers.isEmpty()) return@launch
+
+            val playlist = _currentPlaylist.value ?: return@launch
+            val index = playlist.indexOfFirst { it.uuid == item.uuid }
+            if (index == -1) return@launch
+
+            val updated = playlist[index].copy(voiceovers = voiceovers)
+
+            _currentPlaylist.value = playlist.toMutableList().apply { set(index, updated) }
+            _playlistUiState.value?.let { state ->
+                _playlistUiState.value = state.copy(
+                    items = state.items.map { if (it.uuid == updated.uuid) updated else it }
+                )
+            }
+
+            if (player?.currentMediaItem?.mediaId != item.uuid) return@launch
+            _voiceoverOptions.value = voiceovers
+
+            // Озвучка, выбранная в прошлой серии, включается и здесь, если она есть и еще не играет
+            val preferredId = preferredVoiceoverId ?: return@launch
+            if (voiceovers.none { it.selected && it.id == preferredId }) {
+                voiceovers.firstOrNull { it.id == preferredId }?.let { setVoiceover(it) }
+            }
+        }
     }
 
     /**

@@ -710,6 +710,19 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     private fun showAudioTrackMenu() {
+        // Озвучки отдельными потоками (X-DDD-Voiceover-Path) заменяют список дорожек,
+        // как URL-качества заменяют список видеодорожек
+        val voiceovers = viewModel.voiceoverOptions.value.orEmpty()
+        if (voiceovers.size > 1) {
+            ChoiceDialog.show(
+                requireContext(),
+                getString(R.string.menu_audio_title, voiceovers.size),
+                voiceovers.map { it.name },
+                voiceovers.indexOfFirst { it.selected }
+            ) { viewModel.setVoiceover(voiceovers[it]) }
+            return
+        }
+
         val menuItems = viewModel.getAudioTrackMenuItems(requireContext())
         if (menuItems.isEmpty()) return
         // -1, потому что первый элемент - "Off"
@@ -1205,6 +1218,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // (загрузка субтитров из файла остается в боковом меню)
         viewModel.trackCounts.observe(viewLifecycleOwner) { updateControlButtonsVisibility() }
         viewModel.urlQualityOptions.observe(viewLifecycleOwner) { updateControlButtonsVisibility() }
+        viewModel.voiceoverOptions.observe(viewLifecycleOwner) { updateControlButtonsVisibility() }
 
         viewModel.videoResolution.observe(viewLifecycleOwner) { updateVideoBadge() }
         viewModel.tunnelingActive.observe(viewLifecycleOwner) { updateVideoBadge() }
@@ -1734,7 +1748,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val urlQualityCount = viewModel.urlQualityOptions.value?.size ?: 0
         ui.buttonQuality.isVisible = shown(SettingsRepository.BUTTON_QUALITY) &&
             (counts == null || counts.video > 1 || urlQualityCount > 1)
-        ui.buttonAudio.isVisible = shown(SettingsRepository.BUTTON_AUDIO) && (counts == null || counts.audio > 1)
+        val voiceoverCount = viewModel.voiceoverOptions.value?.size ?: 0
+        ui.buttonAudio.isVisible = shown(SettingsRepository.BUTTON_AUDIO) &&
+            (counts == null || counts.audio > 1 || voiceoverCount > 1)
         ui.buttonSubs.isVisible = shown(SettingsRepository.BUTTON_SUBTITLES) && (counts == null || counts.subtitles > 0)
 
         // Keep them available even without chapters: in that case they jump in
