@@ -8,6 +8,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import top.rootu.dddplayer.model.SkipSegment
 
 @RunWith(RobolectricTestRunner::class)
 class IntentUtilsTest {
@@ -279,6 +280,33 @@ class IntentUtilsTest {
         assertEquals("http://example.com/skip?malId=1&episode=1", items[0].endingOverlay?.segmentsUrl)
         // Без адреса участков подменять нечего
         assertEquals(null, items[1].endingOverlay)
+        items.forEach { item ->
+            assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
+        }
+    }
+
+    @Test
+    fun `skip segments header gives items segments or an address and is not sent to the server`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Segments",
+                    """{"0":[{"type":"op","startTime":0,"endTime":89}],"1":"https://api.aniskip.com/v2/skip-times/20/2?episodeLength=0","2":"ftp://x"}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals(listOf(SkipSegment("op", 0, 89_000)), items[0].skipSegments)
+        assertEquals(null, items[0].skipSegmentsUrl)
+        assertEquals(emptyList<SkipSegment>(), items[1].skipSegments)
+        assertEquals("https://api.aniskip.com/v2/skip-times/20/2?episodeLength=0", items[1].skipSegmentsUrl)
+        // Не http(s) — не качаем
+        assertEquals(null, items[2].skipSegmentsUrl)
         items.forEach { item ->
             assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
         }

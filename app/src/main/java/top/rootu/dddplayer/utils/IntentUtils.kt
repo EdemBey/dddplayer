@@ -11,9 +11,11 @@ import android.provider.OpenableColumns
 import androidx.core.net.toUri
 import org.json.JSONArray
 import org.json.JSONObject
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.model.EndingOverlay
 import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.MediaItem
+import top.rootu.dddplayer.model.SkipSegment
 import top.rootu.dddplayer.model.SubtitleItem
 import top.rootu.dddplayer.model.UrlQuality
 
@@ -24,6 +26,7 @@ object IntentUtils {
     const val ITEM_KEYS_HEADER = "X-DDD-Item-Keys"
     const val POSITIONS_HEADER = "X-DDD-Positions"
     const val AUDIO_OVERLAY_HEADER = "X-DDD-Audio-Overlay"
+    const val SEGMENTS_HEADER = "X-DDD-Segments"
     const val VOICEOVER_PATH_HEADER = "X-DDD-Voiceover-Path"
 
     // Внутренние ключи стартового экрана (FileBrowserActivity -> PlayerActivity), внешним приложениям не нужны
@@ -90,6 +93,7 @@ object IntentUtils {
         val headers = parseHeaders(extras)
         val urlQualities = parseUrlQualities(extras).ifEmpty { parseUrlQualitiesFromHeaders(headers) }
         val audioOverlays = parseAudioOverlays(headers)
+        val skipSegments = parseSkipSegments(headers)
 
         val item = MediaItem(
             uri = uri,
@@ -104,7 +108,9 @@ object IntentUtils {
             voiceoverSourceUrl = voiceoverSourceUrl(headers, uri),
             resumeKey = parseItemKeys(headers)[0],
             knownPositionMs = parseItemPositions(headers)[0] ?: 0L,
-            endingOverlay = audioOverlays[0]
+            endingOverlay = audioOverlays[0],
+            skipSegments = skipSegments[0]?.first ?: emptyList(),
+            skipSegmentsUrl = skipSegments[0]?.second
         )
 
         // A single URL may point at an M3U list; keep the caller's start index
@@ -129,6 +135,7 @@ object IntentUtils {
         val itemKeys = parseItemKeys(headers)
         val itemPositions = parseItemPositions(headers)
         val audioOverlays = parseAudioOverlays(headers)
+        val skipSegments = parseSkipSegments(headers)
         val cleanHeaders = stripQualityHeaders(headers)
 
         val playlist = mutableListOf<MediaItem>()
@@ -168,7 +175,9 @@ object IntentUtils {
                     voiceoverSourceUrl = voiceoverSourceUrl(headers, uri),
                     resumeKey = itemKeys[i],
                     knownPositionMs = itemPositions[i] ?: 0L,
-                    endingOverlay = audioOverlays[i]
+                    endingOverlay = audioOverlays[i],
+                    skipSegments = skipSegments[i]?.first ?: emptyList(),
+                    skipSegmentsUrl = skipSegments[i]?.second
                 )
             )
         }
@@ -235,6 +244,7 @@ object IntentUtils {
                 !it.equals(ITEM_KEYS_HEADER, ignoreCase = true) &&
                 !it.equals(POSITIONS_HEADER, ignoreCase = true) &&
                 !it.equals(AUDIO_OVERLAY_HEADER, ignoreCase = true) &&
+                !it.equals(SEGMENTS_HEADER, ignoreCase = true) &&
                 !it.equals(VOICEOVER_PATH_HEADER, ignoreCase = true)
         }
     }
@@ -306,6 +316,27 @@ object IntentUtils {
             val segments = value.optString("segments", "")
             if (music.isNotBlank() && segments.isNotBlank()) {
                 result[index] = EndingOverlay(music, segments)
+            }
+        }
+        return result
+    }
+
+    /**
+     * X-DDD-Segments: {"0":[{"type":"op","startTime":0,"endTime":89},...],"1":"https://..."} —
+     * для элемента плейлиста готовые сегменты пропуска или адрес, откуда плеер скачает их сам.
+     */
+    private fun parseSkipSegments(headers: Map<String, String>): Map<Int, Pair<List<SkipSegment>, String?>> {
+        val obj = headerJson(headers, SEGMENTS_HEADER) ?: return emptyMap()
+        val result = mutableMapOf<Int, Pair<List<SkipSegment>, String?>>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val index = key.toIntOrNull() ?: continue
+            when (val value = obj.opt(key)) {
+                is JSONArray -> SkipSegmentsLogic.parseInline(value).takeIf { it.isNotEmpty() }
+                    ?.let { result[index] = Pair(it, null) }
+                is String -> value.trim().takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
+                    ?.let { result[index] = Pair(emptyList(), it) }
             }
         }
         return result
