@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import top.rootu.dddplayer.logic.EndingOverlayLogic
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
+import top.rootu.dddplayer.model.SkipSegment
 import top.rootu.dddplayer.model.EndingOverlay
 import top.rootu.dddplayer.model.MediaItem
 import kotlin.math.abs
@@ -46,7 +48,7 @@ class AudioOverlay(
 
     private var overlayPlayer: ExoPlayer? = null
     private var current: EndingOverlay? = null
-    private var segments: List<EndingOverlayLogic.Segment> = emptyList()
+    private var segments: List<SkipSegment> = emptyList()
     private var segmentsKey = ""
     private var loadingKey = ""
     private var mainMuted = false
@@ -180,7 +182,7 @@ class AudioOverlay(
                 if (released || key == segmentsKey) return@post
                 loadingKey = ""
                 segmentsKey = key
-                segments = EndingOverlayLogic.parseSegments(json)
+                segments = SkipSegmentsLogic.parse(json)
                 failed = segments.isEmpty()
                 prepareMusic(overlay)
             }
