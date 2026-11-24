@@ -339,6 +339,14 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `reset right after an upgrade keeps the old smb servers`() {
+        prefs.edit().putString("smb_servers", """[{"id":"1","name":"NAS","address":"smb://nas/Video"}]""").commit()
+        val repo = repo()
+        repo.resetAllSettings()
+        assertEquals(1, repo.getSmbServers().size)
+    }
+
+    @Test
     fun `control bar defaults keep all buttons and no back arrow`() {
         val repo = repo()
         assertTrue(repo.getHiddenControlButtons().isEmpty())
