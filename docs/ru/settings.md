@@ -27,7 +27,7 @@
 | `gesture_volume_brightness` | true | Вертикальные свайпы: громкость справа, яркость слева |
 | `confirm_exit` | true | Выход по второму нажатию «Назад» в течение 2 с |
 | `auto_pip` | false | Авто-PiP при уходе с экрана |
-| `live_mode_control` | false | Эфирный режим (см. [PLAYLISTS.md](PLAYLISTS.md)) |
+| `live_mode_control` | false | Эфирный режим (см. [playlists.md](playlists.md)) |
 | `show_info_on_change` | false | Инфопанель при смене элемента плейлиста |
 | `show_playlist_index` | true | Номера в плейлисте |
 | `saved_playlists` | — | Плейлисты по ссылке на стартовом экране (JSON: id, name, url). Прежний `startup_playlist_uri` переносится сюда один раз и удаляется |

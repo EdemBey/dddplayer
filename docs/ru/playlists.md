@@ -2,7 +2,7 @@
 
 ## Откуда берется плейлист
 
-1. **Intent** (`IntentUtils.parseIntent`) — одиночный файл или `video_list`, см. [INTENT_API.md](INTENT_API.md).
+1. **Intent** (`IntentUtils.parseIntent`) — одиночный файл или `video_list`, см. [intent-api.md](intent-api.md).
 2. **Одиночная ссылка `.m3u`/`.m3u8`** из Intent — плеер проверяет, не плейлист ли это.
 3. **Плейлисты по ссылке на стартовом экране** (`saved_playlists`: название и ссылка; прежний стартовый плейлист
    `startup_playlist_uri` переносится сюда один раз). Проверка на M3U делается принудительно (`forceM3uProbe = true`,

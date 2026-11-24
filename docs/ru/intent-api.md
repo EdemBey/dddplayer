@@ -1,7 +1,7 @@
 # Intent API: реализация
 
-Пользовательское описание с примерами есть в [README.md](../README.md#intent-api-integration)
-и [README_RU.md](../README_RU.md#intent-api-интеграция). Этот документ описывает, как ключи разбираются в коде.
+Пользовательское описание с примерами есть в [README.md](../../README.md#intent-api-integration)
+и [README_RU.md](../../README_RU.md#intent-api-интеграция). Этот документ описывает, как ключи разбираются в коде.
 При изменении ключей обновляйте все три документа.
 
 ## Точка входа
@@ -173,7 +173,7 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 - при `external_position_mode = APPLY` (по умолчанию) плеер сразу стартует с этой позиции;
 - при `= ASK` плеер стартует с 0 и показывает диалог продолжения с этой позицией.
 
-Позиция из Intent приоритетнее сохраненной в плеере. См. [PLAYLISTS.md](PLAYLISTS.md#продолжение-просмотра-handleresumelogic).
+Позиция из Intent приоритетнее сохраненной в плеере. См. [playlists.md](playlists.md#продолжение-просмотра-handleresumelogic).
 
 ## Результат (`return_result = true`)
 

@@ -1,7 +1,7 @@
 // Нативная часть конвертации Dolby Vision Profile 7 -> 8.1: JNI-мост dovi_bridge + статическая libdovi.
 // Модуль подключается только с -Pdovi=true (см. settings.gradle.kts) и собирает AAR в app/libs:
 //   ./gradlew -Pdovi=true :dovi:assembleRelease
-// Обычная сборка приложения и CI его не трогают: AAR лежит в app/libs готовым. Инструкция - app/libs/README.md.
+// Обычная сборка приложения и CI его не трогают: AAR лежит в app/libs готовым. Инструкция - docs/ru/native-libs.md.
 
 plugins {
     alias(libs.plugins.android.library)

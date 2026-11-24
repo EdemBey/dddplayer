@@ -140,9 +140,9 @@ intent.putExtra("subs.name", subNames)
 
 Если приложение умеет передавать только HTTP-заголовки (например, Lampa Android), используйте заголовок `X-DDD-Quality` с тем же JSON. Он не отправляется на сервер видео.
 
-Озвучки, которые идут отдельными потоками того же видео (звук вшит в видео, дорожкой его не переключить), передаются заголовком `X-DDD-Voiceover-Path`, например `/voiceovers`: озвучки элемента отдает адрес самого элемента с этим путем (query остается прежним). Если озвучек больше одной, кнопка аудио показывает их список. Формат ответа описан в [docs/INTENT_API.md](docs/INTENT_API.md).
+Озвучки, которые идут отдельными потоками того же видео (звук вшит в видео, дорожкой его не переключить), передаются заголовком `X-DDD-Voiceover-Path`, например `/voiceovers`: озвучки элемента отдает адрес самого элемента с этим путем (query остается прежним). Если озвучек больше одной, кнопка аудио показывает их список. Формат ответа описан в [docs/ru/intent-api.md](docs/ru/intent-api.md).
 
-Опенинг и эндинг серии передаются заголовком `X-DDD-Segments`: `{"0":[{"type":"op","startTime":0,"endTime":89}],"1":"https://..."}` — для элемента плейлиста готовые сегменты в секундах, адрес, откуда плеер скачает их сам, или то и другое объектом `{"segments":[...],"url":"..."}` (скачанные сегменты добавляются, если не перекрывают готовые больше чем на 5 с). Пока идет сегмент, видна кнопка «Пропустить опенинг/эндинг» (на пульте — OK), а на полосе прокрутки отмечены их участки. Автопропуск включается в настройках. Подробности в [docs/INTENT_API.md](docs/INTENT_API.md).
+Опенинг и эндинг серии передаются заголовком `X-DDD-Segments`: `{"0":[{"type":"op","startTime":0,"endTime":89}],"1":"https://..."}` — для элемента плейлиста готовые сегменты в секундах, адрес, откуда плеер скачает их сам, или то и другое объектом `{"segments":[...],"url":"..."}` (скачанные сегменты добавляются, если не перекрывают готовые больше чем на 5 с). Пока идет сегмент, видна кнопка «Пропустить опенинг/эндинг» (на пульте — OK), а на полосе прокрутки отмечены их участки. Автопропуск включается в настройках. Подробности в [docs/ru/intent-api.md](docs/ru/intent-api.md).
 
 **Структура субтитров в плейлисте:**
 Параметр `video_list.subtitles` — это `ArrayList`, содержащий объекты `Bundle`. Каждый `Bundle` соответствует видео с тем же индексом в плейлисте.
@@ -203,8 +203,8 @@ intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
 *   Версия берется из git (`versionCode` — число коммитов, `versionName` — `git describe --tags`), поэтому клонируйте репозиторий с полной историей.
 *   Каждый push и pull request в `main` собирается в [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml), debug APK прикладывается к запуску как артефакт.
 *   Релизы публикует [workflow Release](.github/workflows/release.yml) при пуше тега `vX.Y.Z`: он собирает подписанный `app-release.apk` и прикладывает его к GitHub Release (оттуда же обновляется приложение). Подпись берется из переменных окружения `KEYSTORE_FILE` (путь относительно `app/`), `KEYSTORE_PASSWORD`, `RELEASE_SIGN_KEY_ALIAS` и `RELEASE_SIGN_KEY_PASSWORD`; без них релиз собирается неподписанным.
-*   AAR декодеров FFmpeg и AV1 и AAR конвертации Dolby Vision (`lib-dovi-release.aar`, модуль `dovi`, сборка `./gradlew -Pdovi=true :dovi:assembleRelease`) в `app/libs` уже собраны; как пересобрать — в [app/libs/README.md](app/libs/README.md).
-*   Документация для разработчиков: [AGENTS.md](AGENTS.md) и [docs/](docs/README.md).
+*   AAR декодеров FFmpeg и AV1 и AAR конвертации Dolby Vision (`lib-dovi-release.aar`, модуль `dovi`, сборка `./gradlew -Pdovi=true :dovi:assembleRelease`) в `app/libs` уже собраны; как пересобрать — в [docs/ru/native-libs.md](docs/ru/native-libs.md).
+*   Документация для разработчиков: [docs/ru/contributing.md](docs/ru/contributing.md) и [docs/](docs/README.md).
 
 ### Вклад в проект и Обратная связь
 

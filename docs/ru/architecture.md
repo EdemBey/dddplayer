@@ -86,7 +86,7 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
   `startPositionMs`, `group`, `uuid` (он же `mediaId` в Media3) и `absoluteIndex` (индекс в полном плейлисте).
 - `data/VideoSettings` (Room, таблица `video_settings`, ключ — URI) хранит стерео-режим, анаглиф,
   swap, глубину, последнюю позицию и длительность, а также ID аудио- и субтитровой дорожек.
-- Глобальные настройки лежат в `SettingsRepository` (SharedPreferences), см. [SETTINGS.md](SETTINGS.md).
+- Глобальные настройки лежат в `SettingsRepository` (SharedPreferences), см. [settings.md](settings.md).
 
 ## Жизненный цикл плеера
 
