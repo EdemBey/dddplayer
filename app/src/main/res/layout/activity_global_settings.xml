@@ -930,9 +930,9 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Автопропуск опенингов и эндингов (X-DDD-Segments) -->
+                <!-- Автопропуск: op -->
                 <LinearLayout
-                    android:id="@+id/item_auto_skip_segments"
+                    android:id="@+id/item_auto_skip_op"
                     style="@style/SettingsItemContainer">
 
                     <LinearLayout
@@ -944,15 +944,61 @@
 
                         <TextView
                             style="@style/SettingsItemTitle"
-                            android:text="@string/settings_auto_skip_segments" />
-
-                        <TextView
-                            style="@style/SettingsItemDesc"
-                            android:text="@string/settings_auto_skip_segments_desc" />
+                            android:text="@string/settings_auto_skip_op" />
                     </LinearLayout>
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_auto_skip_segments"
+                        android:id="@+id/switch_auto_skip_op"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Автопропуск: ed -->
+                <LinearLayout
+                    android:id="@+id/item_auto_skip_ed"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_auto_skip_ed" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_auto_skip_ed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Автопропуск: recap -->
+                <LinearLayout
+                    android:id="@+id/item_auto_skip_recap"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_auto_skip_recap" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_auto_skip_recap"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:clickable="false"
@@ -988,9 +1034,9 @@
                         android:focusable="false" />
                 </LinearLayout>
 
-                <!-- Цвет полосы -->
+                <!-- Цвет полосы: op -->
                 <LinearLayout
-                    android:id="@+id/item_skip_segments_color"
+                    android:id="@+id/item_skip_color_op"
                     style="@style/SettingsItemContainer">
 
                     <LinearLayout
@@ -1002,15 +1048,57 @@
 
                         <TextView
                             style="@style/SettingsItemTitle"
-                            android:text="@string/settings_skip_segments_color" />
-
-                        <TextView
-                            style="@style/SettingsItemDesc"
-                            android:text="@string/settings_skip_segments_color_desc" />
+                            android:text="@string/settings_skip_color_op" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/text_skip_segments_color_value"
+                        android:id="@+id/text_skip_color_op_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Жёлтый" />
+                </LinearLayout>
+
+                <!-- Цвет полосы: ed -->
+                <LinearLayout
+                    android:id="@+id/item_skip_color_ed"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_skip_color_ed" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_skip_color_ed_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Жёлтый" />
+                </LinearLayout>
+
+                <!-- Цвет полосы: recap -->
+                <LinearLayout
+                    android:id="@+id/item_skip_color_recap"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_skip_color_recap" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_skip_color_recap_value"
                         style="@style/SettingsItemValue"
                         tools:text="Жёлтый" />
                 </LinearLayout>

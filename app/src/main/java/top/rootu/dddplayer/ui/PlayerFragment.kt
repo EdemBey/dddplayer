@@ -1814,14 +1814,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
 
-    /** Полосы сегментов на полосе прокрутки: цвет и показ берем из настроек, выключено — пустой список. */
+    /** Полосы сегментов на полосе прокрутки: цвета по типам и показ берем из настроек, выключено — пустой список. */
     private fun applySkipSegmentsMarks(
         segments: List<SkipSegment> = viewModel.skipSegments.value.orEmpty(),
         duration: Long = viewModel.duration.value ?: 0L
     ) {
         val repo = SettingsRepository.getInstance(requireContext().applicationContext)
         val colors = SkipSegmentsLogic.BAND_COLORS
-        ui.seekBar.setSkipColor(colors[repo.getSkipSegmentsColor().coerceIn(colors.indices)])
+        ui.seekBar.setSkipColors(SkipSegmentsLogic.TYPES.associateWith { colors[repo.getSkipSegmentsColor(it).coerceIn(colors.indices)] })
         ui.seekBar.setSkipSegments(if (repo.isSkipSegmentsMarksEnabled()) segments else emptyList(), duration)
     }
 

@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.HistoryEntry
 import top.rootu.dddplayer.model.SavedPlaylist
@@ -215,20 +216,45 @@ class SettingsRepositoryTest {
     @Test
     fun `skip segments settings default to marks on and no auto skip`() {
         val repo = repo()
-        assertFalse(repo.isAutoSkipSegmentsEnabled())
+        SkipSegmentsLogic.TYPES.forEach { assertFalse(repo.isAutoSkipEnabled(it)) }
         assertTrue(repo.isSkipSegmentsMarksEnabled())
-        assertEquals(0, repo.getSkipSegmentsColor())
+        assertEquals(SkipSegmentsLogic.defaultColorIndex("op"), repo.getSkipSegmentsColor("op"))
+        assertEquals(SkipSegmentsLogic.defaultColorIndex("ed"), repo.getSkipSegmentsColor("ed"))
         assertEquals(0, repo.getSkipSegmentsButtonSeconds())
 
+        repo.setAutoSkipEnabled("ed", true)
+        assertEquals(setOf("ed"), repo.getAutoSkipTypes())
         repo.setSkipSegmentsMarksEnabled(false)
-        repo.setSkipSegmentsColor(4)
+        repo.setSkipSegmentsColor("recap", 4)
         repo.setSkipSegmentsButtonSeconds(15)
         assertFalse(repo.isSkipSegmentsMarksEnabled())
-        assertEquals(4, repo.getSkipSegmentsColor())
+        assertEquals(4, repo.getSkipSegmentsColor("recap"))
         assertEquals(15, repo.getSkipSegmentsButtonSeconds())
         // Значение вне списка вариантов читается как «весь сегмент»
         repo.setSkipSegmentsButtonSeconds(7)
         assertEquals(0, repo.getSkipSegmentsButtonSeconds())
+    }
+
+    @Test
+    fun `old shared skip settings migrate to every type`() {
+        prefs.edit().putBoolean("auto_skip_segments", true).putInt("skip_segments_color", 3).commit()
+        val repo = repo()
+        assertEquals(SkipSegmentsLogic.TYPES.toSet(), repo.getAutoSkipTypes())
+        assertEquals(3, repo.getSkipSegmentsColor("op"))
+        assertEquals(3, repo.getSkipSegmentsColor("ed"))
+        assertEquals(SkipSegmentsLogic.defaultColorIndex("recap"), repo.getSkipSegmentsColor("recap"))
+        assertFalse(prefs.contains("auto_skip_segments"))
+        assertFalse(prefs.contains("skip_segments_color"))
+    }
+
+    @Test
+    fun `old shared skip settings without auto skip and yellow keep per type defaults`() {
+        prefs.edit().putBoolean("auto_skip_segments", false).putInt("skip_segments_color", 0).commit()
+        val repo = repo()
+        assertEquals(emptySet<String>(), repo.getAutoSkipTypes())
+        assertEquals(SkipSegmentsLogic.defaultColorIndex("ed"), repo.getSkipSegmentsColor("ed"))
+        assertFalse(prefs.contains("auto_skip_segments"))
+        assertFalse(prefs.contains("skip_segments_color"))
     }
 
     @Test

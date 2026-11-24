@@ -1693,8 +1693,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun updateActiveSkipSegment(positionMs: Long) {
         val segments = _skipSegments.value.orEmpty()
-        if (!isUserInteracting && repository.isAutoSkipSegmentsEnabled()) {
-            SkipSegmentsLogic.autoSkip(segments, positionMs, autoSkipped)?.let {
+        if (!isUserInteracting) {
+            SkipSegmentsLogic.autoSkip(segments, positionMs, autoSkipped, repository.getAutoSkipTypes())?.let {
                 autoSkipped.add(it)
                 seekTo(it.endMs)
                 return

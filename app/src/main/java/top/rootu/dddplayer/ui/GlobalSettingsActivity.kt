@@ -59,6 +59,15 @@ class GlobalSettingsActivity : AppCompatActivity() {
         R.string.skip_color_green, R.string.skip_color_blue, R.string.skip_color_purple
     )
 
+    // Вьюхи и названия настроек сегментов по типу (op, ed, recap)
+    private class SkipSegmentViews(val autoItem: Int, val autoSwitch: Int, val colorItem: Int, val colorValue: Int, val colorTitle: Int)
+
+    private val skipSegmentViews = mapOf(
+        "op" to SkipSegmentViews(R.id.item_auto_skip_op, R.id.switch_auto_skip_op, R.id.item_skip_color_op, R.id.text_skip_color_op_value, R.string.settings_skip_color_op),
+        "ed" to SkipSegmentViews(R.id.item_auto_skip_ed, R.id.switch_auto_skip_ed, R.id.item_skip_color_ed, R.id.text_skip_color_ed_value, R.string.settings_skip_color_ed),
+        "recap" to SkipSegmentViews(R.id.item_auto_skip_recap, R.id.switch_auto_skip_recap, R.id.item_skip_color_recap, R.id.text_skip_color_recap_value, R.string.settings_skip_color_recap)
+    )
+
     private val categories = listOf(
         SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_settings_play),
         SettingsCategory(R.id.section_ui, R.string.settings_cat_ui, R.drawable.ic_settings_ui),
@@ -119,12 +128,12 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemSkipSilence: LinearLayout
     private lateinit var switchSkipSilence: SwitchCompat
     private lateinit var textSkipSilenceDesc: TextView
-    private lateinit var itemAutoSkipSegments: LinearLayout
-    private lateinit var switchAutoSkipSegments: SwitchCompat
+    private val itemAutoSkip = mutableMapOf<String, LinearLayout>()
+    private val switchAutoSkip = mutableMapOf<String, SwitchCompat>()
     private lateinit var itemSkipSegmentsMarks: LinearLayout
     private lateinit var switchSkipSegmentsMarks: SwitchCompat
-    private lateinit var itemSkipSegmentsColor: LinearLayout
-    private lateinit var textSkipSegmentsColorValue: TextView
+    private val itemSkipColor = mutableMapOf<String, LinearLayout>()
+    private val textSkipColorValue = mutableMapOf<String, TextView>()
     private lateinit var itemSkipSegmentsButton: LinearLayout
     private lateinit var textSkipSegmentsButtonValue: TextView
     private lateinit var itemBoost: LinearLayout
@@ -396,12 +405,14 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemSkipSilence = findViewById(R.id.item_skip_silence)
         switchSkipSilence = findViewById(R.id.switch_skip_silence)
         textSkipSilenceDesc = findViewById(R.id.text_skip_silence_desc)
-        itemAutoSkipSegments = findViewById(R.id.item_auto_skip_segments)
-        switchAutoSkipSegments = findViewById(R.id.switch_auto_skip_segments)
+        skipSegmentViews.forEach { (type, v) ->
+            itemAutoSkip[type] = findViewById(v.autoItem)
+            switchAutoSkip[type] = findViewById(v.autoSwitch)
+            itemSkipColor[type] = findViewById(v.colorItem)
+            textSkipColorValue[type] = findViewById(v.colorValue)
+        }
         itemSkipSegmentsMarks = findViewById(R.id.item_skip_segments_marks)
         switchSkipSegmentsMarks = findViewById(R.id.switch_skip_segments_marks)
-        itemSkipSegmentsColor = findViewById(R.id.item_skip_segments_color)
-        textSkipSegmentsColorValue = findViewById(R.id.text_skip_segments_color_value)
         itemSkipSegmentsButton = findViewById(R.id.item_skip_segments_button)
         textSkipSegmentsButtonValue = findViewById(R.id.text_skip_segments_button_value)
         itemBoost = findViewById(R.id.item_boost)
@@ -556,17 +567,19 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemSkipSilence.setOnClickListener {
             settingsViewModel.toggleSkipSilence(!switchSkipSilence.isChecked)
         }
-        itemAutoSkipSegments.setOnClickListener {
-            settingsViewModel.toggleAutoSkipSegments(!switchAutoSkipSegments.isChecked)
+        skipSegmentViews.forEach { (type, v) ->
+            itemAutoSkip.getValue(type).setOnClickListener {
+                settingsViewModel.toggleAutoSkipSegments(type, !switchAutoSkip.getValue(type).isChecked)
+            }
+            itemSkipColor.getValue(type).setOnClickListener {
+                val names = skipSegmentsColorNames.map { getString(it) }
+                showSingleChoiceDialog(getString(v.colorTitle), names, settingsViewModel.skipSegmentsColors.getValue(type).value ?: 0) {
+                    settingsViewModel.setSkipSegmentsColor(type, it)
+                }
+            }
         }
         itemSkipSegmentsMarks.setOnClickListener {
             settingsViewModel.toggleSkipSegmentsMarks(!switchSkipSegmentsMarks.isChecked)
-        }
-        itemSkipSegmentsColor.setOnClickListener {
-            val names = skipSegmentsColorNames.map { getString(it) }
-            showSingleChoiceDialog(getString(R.string.settings_skip_segments_color), names, settingsViewModel.skipSegmentsColor.value ?: 0) {
-                settingsViewModel.setSkipSegmentsColor(it)
-            }
         }
         itemSkipSegmentsButton.setOnClickListener {
             val options = SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS
@@ -832,14 +845,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
             switchSkipSilence.isChecked = enabled
             textSkipSilenceDesc.setText(settingsViewModel.getSkipSilenceDescResId(enabled))
         }
-        settingsViewModel.isAutoSkipSegmentsEnabled.observe(this) { enabled ->
-            switchAutoSkipSegments.isChecked = enabled
+        skipSegmentViews.keys.forEach { type ->
+            settingsViewModel.autoSkipSegments.getValue(type).observe(this) { enabled ->
+                switchAutoSkip.getValue(type).isChecked = enabled
+            }
+            settingsViewModel.skipSegmentsColors.getValue(type).observe(this) { index ->
+                textSkipColorValue.getValue(type).setText(skipSegmentsColorNames.getOrElse(index) { skipSegmentsColorNames[0] })
+            }
         }
         settingsViewModel.isSkipSegmentsMarksEnabled.observe(this) { enabled ->
             switchSkipSegmentsMarks.isChecked = enabled
-        }
-        settingsViewModel.skipSegmentsColor.observe(this) { index ->
-            textSkipSegmentsColorValue.setText(skipSegmentsColorNames.getOrElse(index) { skipSegmentsColorNames[0] })
         }
         settingsViewModel.skipSegmentsButtonSeconds.observe(this) { seconds ->
             textSkipSegmentsButtonValue.text = skipButtonSecondsLabel(seconds)

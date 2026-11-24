@@ -438,17 +438,40 @@ class SettingsRepository private constructor(context: Context) {
     fun isSkipSilenceEnabled(): Boolean = prefs.getBoolean("skip_silence", false)
     fun setSkipSilenceEnabled(enabled: Boolean) = prefs.edit { putBoolean("skip_silence", enabled) }
 
-    // Автопропуск опенингов/эндингов из X-DDD-Segments; по умолчанию только кнопка
-    fun isAutoSkipSegmentsEnabled(): Boolean = prefs.getBoolean("auto_skip_segments", false)
-    fun setAutoSkipSegmentsEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_skip_segments", enabled) }
+    // Автопропуск сегментов из X-DDD-Segments по типам (op, ed, recap); по умолчанию только кнопка.
+    // Миграция со старого общего "auto_skip_segments": был включен -> включены все три типа.
+    fun isAutoSkipEnabled(type: String): Boolean {
+        migrateSkipSegments()
+        return prefs.getBoolean("auto_skip_$type", false)
+    }
+    fun setAutoSkipEnabled(type: String, enabled: Boolean) = prefs.edit { putBoolean("auto_skip_$type", enabled) }
+    fun getAutoSkipTypes(): Set<String> = SkipSegmentsLogic.TYPES.filter { isAutoSkipEnabled(it) }.toSet()
 
     // Полосы сегментов на полосе прокрутки; включены по умолчанию
     fun isSkipSegmentsMarksEnabled(): Boolean = prefs.getBoolean("skip_segments_marks", true)
     fun setSkipSegmentsMarksEnabled(enabled: Boolean) = prefs.edit { putBoolean("skip_segments_marks", enabled) }
 
-    // Цвет полосы: индекс в SkipSegmentsLogic.BAND_COLORS, 0 — жёлтый
-    fun getSkipSegmentsColor(): Int = prefs.getInt("skip_segments_color", 0)
-    fun setSkipSegmentsColor(index: Int) = prefs.edit { putInt("skip_segments_color", index) }
+    // Цвет полосы типа: индекс в SkipSegmentsLogic.BAND_COLORS (по умолчанию SkipSegmentsLogic.defaultColorIndex).
+    // Миграция со старого общего "skip_segments_color": переносится в опенинг и эндинг.
+    fun getSkipSegmentsColor(type: String): Int {
+        migrateSkipSegments()
+        return prefs.getInt("skip_color_$type", SkipSegmentsLogic.defaultColorIndex(type))
+    }
+    fun setSkipSegmentsColor(type: String, index: Int) = prefs.edit { putInt("skip_color_$type", index) }
+
+    // Однократный перенос общих настроек сегментов на настройки по типам; старые ключи удаляются
+    private fun migrateSkipSegments() {
+        if (!prefs.contains("auto_skip_segments") && !prefs.contains("skip_segments_color")) return
+        val oldAuto = prefs.getBoolean("auto_skip_segments", false)
+        // Желтый (0) был значением по умолчанию: его не переносим, чтобы у эндинга остался свой цвет
+        val oldColor = prefs.getInt("skip_segments_color", 0).takeIf { it != 0 }
+        prefs.edit {
+            if (oldAuto) SkipSegmentsLogic.TYPES.forEach { putBoolean("auto_skip_$it", true) }
+            if (oldColor != null) listOf("op", "ed").forEach { putInt("skip_color_$it", oldColor) }
+            remove("auto_skip_segments")
+            remove("skip_segments_color")
+        }
+    }
 
     // Сколько секунд после начала сегмента видна кнопка «Пропустить»; 0 — пока идет весь сегмент
     // Значение вне списка вариантов (SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS) читается как 0

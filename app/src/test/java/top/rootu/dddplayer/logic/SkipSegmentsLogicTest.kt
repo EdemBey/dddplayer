@@ -295,12 +295,21 @@ class SkipSegmentsLogicTest {
     @Test
     fun `auto skip fires once per segment and not in its last second`() {
         val list = listOf(opening, ending)
+        val all = SkipSegmentsLogic.TYPES.toSet()
         val skipped = mutableSetOf<SkipSegment>()
-        assertEquals(opening, SkipSegmentsLogic.autoSkip(list, 0, skipped))
+        assertEquals(opening, SkipSegmentsLogic.autoSkip(list, 0, skipped, all))
         skipped.add(opening)
         // Перемотали назад в опенинг — второй раз не выкидываем
-        assertNull(SkipSegmentsLogic.autoSkip(list, 10_000, skipped))
-        assertNull(SkipSegmentsLogic.autoSkip(list, 1372_000, skipped))
-        assertEquals(ending, SkipSegmentsLogic.autoSkip(list, 1300_000, skipped))
+        assertNull(SkipSegmentsLogic.autoSkip(list, 10_000, skipped, all))
+        assertNull(SkipSegmentsLogic.autoSkip(list, 1372_000, skipped, all))
+        assertEquals(ending, SkipSegmentsLogic.autoSkip(list, 1300_000, skipped, all))
+    }
+
+    @Test
+    fun `auto skip only for enabled types`() {
+        val list = listOf(opening, ending)
+        assertNull(SkipSegmentsLogic.autoSkip(list, 0, emptySet(), setOf("ed")))
+        assertEquals(ending, SkipSegmentsLogic.autoSkip(list, 1300_000, emptySet(), setOf("ed")))
+        assertNull(SkipSegmentsLogic.autoSkip(list, 1300_000, emptySet(), setOf("op")))
     }
 }

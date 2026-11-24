@@ -155,7 +155,7 @@ object SkipSegmentsLogic {
         return result.sortedBy { it.startMs }
     }
 
-    /** Цвета полосы сегментов (0xAARRGGBB) по индексу настройки `skip_segments_color`; индекс 0 — прежний желтый. */
+    /** Цвета полосы сегментов (0xAARRGGBB) по индексу настроек `skip_color_<тип>`; индекс 0 — прежний желтый. */
     val BAND_COLORS = intArrayOf(
         0x96FFC400.toInt(), // жёлтый
         0x96FFFFFF.toInt(), // белый
@@ -171,9 +171,24 @@ object SkipSegmentsLogic {
     /** Сохраненное значение вне списка вариантов считается «весь сегмент». */
     fun normalizeButtonSeconds(seconds: Int): Int = if (seconds in BUTTON_SECONDS_OPTIONS) seconds else 0
 
-    /** Сегмент для автопропуска: тот, где позиция, если его еще не пропускали в этой серии. */
-    fun autoSkip(segments: List<SkipSegment>, positionMs: Long, skipped: Set<SkipSegment>): SkipSegment? =
-        active(segments, positionMs)?.takeIf { it !in skipped }
+    /** Типы сегментов; совпадают с суффиксами ключей настроек (`auto_skip_<тип>`, `skip_color_<тип>`). */
+    val TYPES = listOf("op", "ed", "recap")
+
+    /** Цвет полосы по умолчанию для типа: индекс в BAND_COLORS (опенинг жёлтый, эндинг красный, пересказ синий). */
+    fun defaultColorIndex(type: String): Int = when (type) {
+        "ed" -> 2
+        "recap" -> 4
+        else -> 0
+    }
+
+    /** Сегмент для автопропуска: тот, где позиция, если его тип включен и его еще не пропускали в этой серии. */
+    fun autoSkip(
+        segments: List<SkipSegment>,
+        positionMs: Long,
+        skipped: Set<SkipSegment>,
+        enabledTypes: Set<String>
+    ): SkipSegment? =
+        active(segments.filter { it.type in enabledTypes && it !in skipped }, positionMs)
 
     /**
      * AniSkip отбирает тайминги по длине серии, kopenkin — по duration (±2 с, без него отвечает 400):

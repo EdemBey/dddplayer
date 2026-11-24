@@ -31,8 +31,9 @@ class ChapterSeekBar @JvmOverloads constructor(
 
     // Опенинг/эндинг (X-DDD-Segments): полупрозрачная полоса поверх дорожки, как и метки глав
     private val skipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(150, 255, 196, 0)
+        color = DEFAULT_SKIP_COLOR
     }
+    private var skipColors: Map<String, Int> = emptyMap()
     private var skipSegments: List<SkipSegment> = emptyList()
     private var skipDurationMs = 0L
 
@@ -47,8 +48,9 @@ class ChapterSeekBar @JvmOverloads constructor(
         invalidate()
     }
 
-    fun setSkipColor(color: Int) {
-        skipPaint.color = color
+    // Цвет полосы по типу сегмента (op, ed, recap); неизвестный тип рисуется цветом skipPaint по умолчанию
+    fun setSkipColors(colors: Map<String, Int>) {
+        skipColors = colors
         invalidate()
     }
 
@@ -92,7 +94,13 @@ class ChapterSeekBar @JvmOverloads constructor(
         for (seg in skipSegments) {
             val x1 = left + (right - left) * (seg.startMs.coerceIn(0, skipDurationMs).toFloat() / skipDurationMs)
             val x2 = left + (right - left) * (seg.endMs.coerceIn(0, skipDurationMs).toFloat() / skipDurationMs)
+            skipPaint.color = skipColors[seg.type] ?: DEFAULT_SKIP_COLOR
             if (x2 > x1) canvas.drawRect(x1, centerY - half, x2, centerY + half, skipPaint)
         }
+    }
+
+    private companion object {
+        // Жёлтый, как у опенинга по умолчанию
+        val DEFAULT_SKIP_COLOR = Color.argb(150, 255, 196, 0)
     }
 }

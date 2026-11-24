@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
@@ -63,14 +64,15 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _isSkipSilenceEnabled = MutableLiveData(repository.isSkipSilenceEnabled())
     val isSkipSilenceEnabled: LiveData<Boolean> = _isSkipSilenceEnabled
 
-    private val _isAutoSkipSegmentsEnabled = MutableLiveData(repository.isAutoSkipSegmentsEnabled())
-    val isAutoSkipSegmentsEnabled: LiveData<Boolean> = _isAutoSkipSegmentsEnabled
+    // Автопропуск и цвет полосы по типам сегментов (SkipSegmentsLogic.TYPES)
+    private val _autoSkipSegments = SkipSegmentsLogic.TYPES.associateWith { MutableLiveData(repository.isAutoSkipEnabled(it)) }
+    val autoSkipSegments: Map<String, LiveData<Boolean>> = _autoSkipSegments
 
     private val _isSkipSegmentsMarksEnabled = MutableLiveData(repository.isSkipSegmentsMarksEnabled())
     val isSkipSegmentsMarksEnabled: LiveData<Boolean> = _isSkipSegmentsMarksEnabled
 
-    private val _skipSegmentsColor = MutableLiveData(repository.getSkipSegmentsColor())
-    val skipSegmentsColor: LiveData<Int> = _skipSegmentsColor
+    private val _skipSegmentsColors = SkipSegmentsLogic.TYPES.associateWith { MutableLiveData(repository.getSkipSegmentsColor(it)) }
+    val skipSegmentsColors: Map<String, LiveData<Int>> = _skipSegmentsColors
 
     private val _skipSegmentsButtonSeconds = MutableLiveData(repository.getSkipSegmentsButtonSeconds())
     val skipSegmentsButtonSeconds: LiveData<Int> = _skipSegmentsButtonSeconds
@@ -341,9 +343,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isSkipSilenceEnabled.value = enabled
     }
 
-    fun toggleAutoSkipSegments(enabled: Boolean) {
-        repository.setAutoSkipSegmentsEnabled(enabled)
-        _isAutoSkipSegmentsEnabled.value = enabled
+    fun toggleAutoSkipSegments(type: String, enabled: Boolean) {
+        repository.setAutoSkipEnabled(type, enabled)
+        _autoSkipSegments.getValue(type).value = enabled
     }
 
     fun toggleSkipSegmentsMarks(enabled: Boolean) {
@@ -351,9 +353,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isSkipSegmentsMarksEnabled.value = enabled
     }
 
-    fun setSkipSegmentsColor(index: Int) {
-        repository.setSkipSegmentsColor(index)
-        _skipSegmentsColor.value = index
+    fun setSkipSegmentsColor(type: String, index: Int) {
+        repository.setSkipSegmentsColor(type, index)
+        _skipSegmentsColors.getValue(type).value = index
     }
 
     fun setSkipSegmentsButtonSeconds(seconds: Int) {
