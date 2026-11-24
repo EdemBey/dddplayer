@@ -50,6 +50,41 @@ object SkipSegmentsLogic {
         }
     }
 
+    /** Допуск, в котором длина видео из результата AniSkip считается длиной играющего видео. */
+    private const val LENGTH_MATCH_MS = 1500L
+
+    /**
+     * AniSkip с подбором по длине: номера серий там бывают сдвинуты (JoJo SBR: опенинг 2-й серии лежит в 1-й),
+     * но у каждого результата есть episodeLength — длина видео, на котором его отметили. Оставляем только
+     * результаты с длиной играющего видео (±1,5 с); без длительности подбирать не по чему.
+     */
+    fun parseAniSkipMatching(json: String, durationMs: Long): List<SkipSegment> {
+        if (durationMs <= 0) return emptyList()
+        return try {
+            val results = JSONObject(json.trim()).optJSONArray("results") ?: return emptyList()
+            val list = mutableListOf<SkipSegment>()
+            for (i in 0 until results.length()) {
+                val obj = results.optJSONObject(i) ?: continue
+                val lengthMs = (obj.optDouble("episodeLength", 0.0) * 1000).toLong()
+                if (lengthMs <= 0 || kotlin.math.abs(lengthMs - durationMs) > LENGTH_MATCH_MS) continue
+                val interval = obj.optJSONObject("interval") ?: continue
+                segment(obj.optString("skipType"), interval)?.let { list.add(it) }
+            }
+            list.sortedBy { it.startMs }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Ответы AniSkip по серии и соседним: каждый тип (op/ed/recap) берется из первого ответа, где он есть.
+     * Соседние серии той же длины лишь дополняют типы, которых у самой серии нет, и не добавляют второй опенинг.
+     */
+    fun mergeByType(lists: List<List<SkipSegment>>): List<SkipSegment> =
+        lists.fold(emptyList<SkipSegment>()) { acc, next ->
+            acc + next.filter { n -> acc.none { it.type == n.type } }
+        }.sortedBy { it.startMs }
+
     // Ключи сериальных баз -> тип сегмента; preview и post_credits не пропускаем
     private val seriesTypes = mapOf("intro" to "op", "recap" to "recap", "credits" to "ed", "outro" to "ed")
 

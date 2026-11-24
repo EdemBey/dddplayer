@@ -360,6 +360,28 @@ class IntentUtilsTest {
     }
 
     @Test
+    fun `skip segments header carries aniskip urls next to inline segments`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Segments",
+                    """{"0":{"aniskip":["https://api.aniskip.com/a","ftp://x"],"segments":[{"type":"op","startTime":0,"endTime":89}]},"1":{"aniskip":["https://api.aniskip.com/b"]}}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals(listOf("https://api.aniskip.com/a"), items[0].skipAniskipUrls)
+        assertEquals(listOf(SkipSegment("op", 0, 89_000)), items[0].skipSegments)
+        assertEquals(listOf("https://api.aniskip.com/b"), items[1].skipAniskipUrls)
+        assertEquals(emptyList<String>(), items[1].skipSegmentsUrls)
+    }
+
+    @Test
     fun `voiceover path header gives every item its own address and is not sent to the server`() {
         val streams = arrayOf(
             Uri.parse("https://helper.example/play.m3u8?q=1080&url=https%3A%2F%2Fsite%2F%3Fepisode%3D1%26audio%3DA%2520B"),

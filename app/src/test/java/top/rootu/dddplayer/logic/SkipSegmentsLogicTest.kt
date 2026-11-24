@@ -312,4 +312,31 @@ class SkipSegmentsLogicTest {
         assertEquals(ending, SkipSegmentsLogic.autoSkip(list, 1300_000, emptySet(), setOf("ed")))
         assertNull(SkipSegmentsLogic.autoSkip(list, 1300_000, emptySet(), setOf("op")))
     }
+
+    @Test
+    fun `aniskip results are kept only for the playing video length`() {
+        // JoJo SBR: AniSkip ep 1 holds the opening of the 1516 s ep 2, ep 2 mixes a 1512 s opening with the 1516 s song
+        val ep1 = """{"found":true,"results":[{"interval":{"startTime":136.8,"endTime":223.8},"skipType":"op","episodeLength":1516}]}"""
+        val ep2 = """{"found":true,"results":[{"interval":{"startTime":182,"endTime":270.3},"skipType":"op","episodeLength":1512},
+            {"interval":{"startTime":1297.7241,"endTime":1387.5419},"skipType":"ed","episodeLength":1516.1005}]}"""
+        val ep2Video = 1516_000L
+        val merged = SkipSegmentsLogic.mergeByType(listOf(ep2, ep1, "{}").map { SkipSegmentsLogic.parseAniSkipMatching(it, ep2Video) })
+        assertEquals(listOf(SkipSegment("op", 136_800, 223_800), SkipSegment("ed", 1297_724, 1387_541)), merged)
+        // Видео другой длины (двойная первая серия) — ничего; без длительности тоже
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.parseAniSkipMatching(ep1, 2924_000))
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.parseAniSkipMatching(ep1, 0))
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.parseAniSkipMatching("not json", ep2Video))
+    }
+
+    @Test
+    fun `neighbour episodes of the same length only fill missing types`() {
+        val own = listOf(SkipSegment("op", 0, 90_000))
+        val prev = listOf(SkipSegment("op", 180_000, 270_000), SkipSegment("ed", 1300_000, 1390_000))
+        val next = listOf(SkipSegment("op", 30_000, 120_000), SkipSegment("recap", 0, 20_000))
+        assertEquals(
+            listOf(SkipSegment("op", 0, 90_000), SkipSegment("ed", 1300_000, 1390_000)),
+            SkipSegmentsLogic.mergeByType(listOf(own, prev, emptyList())).filter { it.type != "recap" }
+        )
+        assertEquals(listOf("op", "recap", "ed"), SkipSegmentsLogic.mergeByType(listOf(own, prev, next)).map { it.type })
+    }
 }

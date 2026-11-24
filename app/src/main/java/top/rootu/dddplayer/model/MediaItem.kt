@@ -33,6 +33,8 @@ data class MediaItem(
     val skipSegments: List<SkipSegment> = emptyList(),
     // Адреса, откуда скачать сегменты пропуска (X-DDD-Segments, строка или массив URL): по порядку, до первого с сегментами
     val skipSegmentsUrls: List<String> = emptyList(),
+    // Адреса AniSkip (серия и соседние): берутся результаты с длиной этого видео (X-DDD-Segments, "aniskip")
+    val skipAniskipUrls: List<String> = emptyList(),
     // Уникальный ID для DiffUtil, генерируется автоматически при создании объекта
     val uuid: String = UUID.randomUUID().toString()
 )

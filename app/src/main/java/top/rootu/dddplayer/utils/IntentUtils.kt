@@ -109,8 +109,9 @@ object IntentUtils {
             resumeKey = parseItemKeys(headers)[0],
             knownPositionMs = parseItemPositions(headers)[0] ?: 0L,
             endingOverlay = audioOverlays[0],
-            skipSegments = skipSegments[0]?.first ?: emptyList(),
-            skipSegmentsUrls = skipSegments[0]?.second.orEmpty()
+            skipSegments = skipSegments[0]?.segments.orEmpty(),
+            skipSegmentsUrls = skipSegments[0]?.urls.orEmpty(),
+            skipAniskipUrls = skipSegments[0]?.aniskip.orEmpty()
         )
 
         // A single URL may point at an M3U list; keep the caller's start index
@@ -176,8 +177,9 @@ object IntentUtils {
                     resumeKey = itemKeys[i],
                     knownPositionMs = itemPositions[i] ?: 0L,
                     endingOverlay = audioOverlays[i],
-                    skipSegments = skipSegments[i]?.first ?: emptyList(),
-                    skipSegmentsUrls = skipSegments[i]?.second.orEmpty()
+                    skipSegments = skipSegments[i]?.segments.orEmpty(),
+                    skipSegmentsUrls = skipSegments[i]?.urls.orEmpty(),
+                    skipAniskipUrls = skipSegments[i]?.aniskip.orEmpty()
                 )
             )
         }
@@ -327,23 +329,26 @@ object IntentUtils {
      * готовые сегменты пропуска, адреса, откуда плеер скачает их сам (по порядку, до первого с сегментами),
      * или то и другое (объект, ключи необязательны).
      */
-    private fun parseSkipSegments(headers: Map<String, String>): Map<Int, Pair<List<SkipSegment>, List<String>>> {
+    private class SkipSource(val segments: List<SkipSegment>, val urls: List<String>, val aniskip: List<String>)
+
+    private fun parseSkipSegments(headers: Map<String, String>): Map<Int, SkipSource> {
         val obj = headerJson(headers, SEGMENTS_HEADER) ?: return emptyMap()
-        val result = mutableMapOf<Int, Pair<List<SkipSegment>, List<String>>>()
+        val result = mutableMapOf<Int, SkipSource>()
         val keys = obj.keys()
         while (keys.hasNext()) {
             val key = keys.next()
             val index = key.toIntOrNull() ?: continue
-            val (segments, urls) = when (val value = obj.opt(key)) {
-                is JSONArray -> Pair(SkipSegmentsLogic.parseInline(value), emptyList())
-                is String -> Pair(emptyList(), httpUrls(value))
-                is JSONObject -> Pair(
+            val source = when (val value = obj.opt(key)) {
+                is JSONArray -> SkipSource(SkipSegmentsLogic.parseInline(value), emptyList(), emptyList())
+                is String -> SkipSource(emptyList(), httpUrls(value), emptyList())
+                is JSONObject -> SkipSource(
                     value.optJSONArray("segments")?.let { SkipSegmentsLogic.parseInline(it) }.orEmpty(),
-                    httpUrls(value.opt("url"))
+                    httpUrls(value.opt("url")),
+                    httpUrls(value.opt("aniskip"))
                 )
                 else -> continue
             }
-            if (segments.isNotEmpty() || urls.isNotEmpty()) result[index] = Pair(segments, urls)
+            if (source.segments.isNotEmpty() || source.urls.isNotEmpty() || source.aniskip.isNotEmpty()) result[index] = source
         }
         return result
     }

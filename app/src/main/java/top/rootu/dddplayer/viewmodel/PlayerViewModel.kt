@@ -1659,7 +1659,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _skipSegments.value = item?.skipSegments.orEmpty()
         rebuildChapters()
         val urls = item?.skipSegmentsUrls.orEmpty()
-        if (item == null || urls.isEmpty()) return
+        val aniskip = item?.skipAniskipUrls.orEmpty()
+        if (item == null || urls.isEmpty() && aniskip.isEmpty()) return
         val inline = item.skipSegments
 
         skipSegmentsJob = viewModelScope.launch {
@@ -1675,15 +1676,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 delay(250L)
             }
-            // Адреса по порядку, до первого ответа с опенингом, иначе первый непустой (например, TheIntroDB, затем IntroDB)
-            val list = withContext(Dispatchers.IO) {
-                SkipSegmentsLogic.firstNonEmpty(urls) { url ->
+            val (matched, list) = withContext(Dispatchers.IO) {
+                // AniSkip: серия и соседние, только результаты с длиной этого видео; без длительности подбирать не по чему
+                val matched = if (durationMs <= 0) emptyList() else SkipSegmentsLogic.mergeByType(aniskip.map { url ->
+                    urlQualityLoader.fetch(url)?.let { SkipSegmentsLogic.parseAniSkipMatching(it, durationMs) }.orEmpty()
+                })
+                // Адреса по порядку, до первого ответа с опенингом, иначе первый непустой (например, TheIntroDB, затем IntroDB)
+                val list = SkipSegmentsLogic.firstNonEmpty(urls) { url ->
                     urlQualityLoader.fetch(SkipSegmentsLogic.urlWithDuration(url, durationMs))
                         ?.let { SkipSegmentsLogic.parse(it, durationMs) }.orEmpty()
                 }
+                Pair(matched, list)
             }
+            // Встроенные (тайминги того же релиза, Kodik) главнее AniSkip при перекрытии.
             // autoSkipped не сбрасываем: встроенные сегменты в объединенном списке те же, повторно не пропускаются
-            val combined = SkipSegmentsLogic.combine(inline, list)
+            val combined = SkipSegmentsLogic.combine(SkipSegmentsLogic.combine(inline, matched), list)
             if (skipSegmentsItemId == item.uuid && combined != _skipSegments.value) {
                 _skipSegments.value = combined
                 rebuildChapters()
