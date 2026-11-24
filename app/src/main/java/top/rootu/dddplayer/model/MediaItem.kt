@@ -31,8 +31,8 @@ data class MediaItem(
     val endingOverlay: EndingOverlay? = null,
     // Пропуск опенинга/эндинга (X-DDD-Segments): готовые сегменты
     val skipSegments: List<SkipSegment> = emptyList(),
-    // Адрес, откуда скачать сегменты пропуска (X-DDD-Segments, строка-URL)
-    val skipSegmentsUrl: String? = null,
+    // Адреса, откуда скачать сегменты пропуска (X-DDD-Segments, строка или массив URL): по порядку, до первого с сегментами
+    val skipSegmentsUrls: List<String> = emptyList(),
     // Уникальный ID для DiffUtil, генерируется автоматически при создании объекта
     val uuid: String = UUID.randomUUID().toString()
 )
@@ -47,7 +47,7 @@ data class EndingOverlay(
 )
 
 /**
- * Сегмент пропуска (опенинг/эндинг): тип и границы в миллисекундах.
+ * Сегмент пропуска: тип ("op" опенинг, "ed" эндинг, "recap" пересказ) и границы в миллисекундах.
  */
 data class SkipSegment(
     val type: String,

@@ -10,6 +10,7 @@ import org.json.JSONObject
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.HomeLogic
 import top.rootu.dddplayer.logic.SeekStepLogic
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.HistoryEntry
@@ -450,7 +451,9 @@ class SettingsRepository private constructor(context: Context) {
     fun setSkipSegmentsColor(index: Int) = prefs.edit { putInt("skip_segments_color", index) }
 
     // Сколько секунд после начала сегмента видна кнопка «Пропустить»; 0 — пока идет весь сегмент
-    fun getSkipSegmentsButtonSeconds(): Int = prefs.getInt("skip_segments_button_seconds", 0)
+    // Значение вне списка вариантов (SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS) читается как 0
+    fun getSkipSegmentsButtonSeconds(): Int =
+        SkipSegmentsLogic.normalizeButtonSeconds(prefs.getInt("skip_segments_button_seconds", 0))
     fun setSkipSegmentsButtonSeconds(seconds: Int) = prefs.edit { putInt("skip_segments_button_seconds", seconds) }
 
     fun getPreferredAudioLang(): String = prefs.getString("pref_audio_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT

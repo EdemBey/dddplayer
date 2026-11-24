@@ -27,13 +27,102 @@ class SkipSegmentsLogicTest {
     }
 
     @Test
-    fun `AniSkip results with mixed types, recap is dropped`() {
+    fun `AniSkip results with mixed types, recap becomes a recap segment`() {
         val json = """{"found":true,"results":[
             {"interval":{"startTime":0,"endTime":89},"skipType":"mixed-op","skipId":"a","episodeLength":1376},
             {"interval":{"startTime":1273,"endTime":1372.5},"skipType":"ed","skipId":"b","episodeLength":1376},
             {"interval":{"startTime":100,"endTime":160},"skipType":"recap","skipId":"c","episodeLength":1376}
         ],"message":"Successfully found skip times","statusCode":200}"""
-        assertEquals(listOf(opening, ending), SkipSegmentsLogic.parse(json))
+        assertEquals(listOf(opening, SkipSegment("recap", 100_000, 160_000), ending), SkipSegmentsLogic.parse(json))
+    }
+
+    @Test
+    fun `TheIntroDB maps types, null start and end, drops junk and preview`() {
+        val json = """{"tmdb_id":1,"type":"tv",
+            "intro":[{"start_ms":314517,"end_ms":331147}],
+            "recap":[{"start_ms":null,"end_ms":60000},{"start_ms":0,"end_ms":0}],
+            "credits":[{"start_ms":2848346,"end_ms":null},{"start_ms":0,"end_ms":64959},{"start_ms":100000,"end_ms":102000}],
+            "preview":[{"start_ms":2900000,"end_ms":2950000}]}"""
+        assertEquals(
+            listOf(
+                SkipSegment("recap", 0, 60_000),
+                SkipSegment("op", 314_517, 331_147),
+                SkipSegment("ed", 2848_346, 2901_000)
+            ),
+            SkipSegmentsLogic.parse(json, 2901_000)
+        )
+        // Без длительности end_ms: null не к чему привязать — сегмент отбрасывается
+        assertEquals(
+            listOf(SkipSegment("recap", 0, 60_000), SkipSegment("op", 314_517, 331_147)),
+            SkipSegmentsLogic.parse(json)
+        )
+        // Массивов нет вовсе
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.parse("""{"tvdb_id":1,"type":"tv"}""", 1000_000))
+    }
+
+    @Test
+    fun `IntroDB single objects, nulls and post credits`() {
+        val json = """{"imdb_id":"tt1","intro":{"start_ms":314500,"end_ms":331000,"confidence":1},
+            "recap":null,"outro":{"start_ms":2843000,"end_ms":2901000},"post_credits":{"start_ms":2950000,"end_ms":3000000},
+            "no_intro":false}"""
+        assertEquals(
+            listOf(SkipSegment("op", 314_500, 331_000), SkipSegment("ed", 2843_000, 2901_000)),
+            SkipSegmentsLogic.parse(json, 2901_000)
+        )
+        // Все поля null — данных нет
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.parse("""{"intro":null,"recap":null,"outro":null,"post_credits":null}"""))
+        // Короче 5 с и титры с нуля — мусор
+        assertEquals(
+            emptyList<SkipSegment>(),
+            SkipSegmentsLogic.parse("""{"intro":{"start_ms":1000,"end_ms":4000},"outro":{"start_ms":0,"end_ms":90000}}""")
+        )
+    }
+
+    @Test
+    fun `first address with an opening wins and the rest are not requested`() {
+        val asked = mutableListOf<String>()
+        val result = SkipSegmentsLogic.firstNonEmpty(listOf("a", "b", "c")) { url ->
+            asked.add(url)
+            if (url == "b") listOf(opening) else emptyList()
+        }
+        assertEquals(listOf(opening), result)
+        assertEquals(listOf("a", "b"), asked)
+
+        // Первый адрес дал опенинг — второй не запрашивается
+        asked.clear()
+        assertEquals(listOf(opening), SkipSegmentsLogic.firstNonEmpty(listOf("a", "b")) { asked.add(it); listOf(opening) })
+        assertEquals(listOf("a"), asked)
+
+        // Первый дал только эндинг — пробуем дальше, побеждает ответ с опенингом
+        asked.clear()
+        val full = listOf(opening, ending)
+        assertEquals(
+            full,
+            SkipSegmentsLogic.firstNonEmpty(listOf("a", "b")) { asked.add(it); if (it == "a") listOf(ending) else full }
+        )
+        assertEquals(listOf("a", "b"), asked)
+
+        // Опенинга нет нигде — первый непустой ответ
+        val edOnly = listOf(SkipSegment("ed", 900_000, 960_000))
+        assertEquals(
+            edOnly,
+            SkipSegmentsLogic.firstNonEmpty(listOf("a", "b", "c")) { if (it == "c") listOf(ending) else if (it == "b") edOnly else emptyList() }
+        )
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.firstNonEmpty(listOf("a")) { emptyList() })
+        assertEquals(emptyList<SkipSegment>(), SkipSegmentsLogic.firstNonEmpty(emptyList()) { listOf(opening) })
+    }
+
+    @Test
+    fun `recap gets its own chapter title and button value stays seconds`() {
+        val result = merge(emptyList(), listOf(SkipSegment("recap", 0, 60_000), SkipSegment("op", 300_000, 330_000)))
+        assertEquals(
+            listOf(Chapter(0, "Recap"), Chapter(60_000, "Episode"), Chapter(300_000, "Opening"), Chapter(330_000, "Episode")),
+            result
+        )
+        assertEquals(10, SkipSegmentsLogic.normalizeButtonSeconds(10))
+        assertEquals(0, SkipSegmentsLogic.normalizeButtonSeconds(0))
+        // Значение вне списка — весь сегмент
+        assertEquals(0, SkipSegmentsLogic.normalizeButtonSeconds(7))
     }
 
     @Test
@@ -146,7 +235,7 @@ class SkipSegmentsLogicTest {
     }
 
     private fun merge(container: List<Chapter>, segments: List<SkipSegment>, durationMs: Long = 1_400_000) =
-        SkipSegmentsLogic.mergeChapters(container, segments, durationMs, "Opening", "Ending", "Episode")
+        SkipSegmentsLogic.mergeChapters(container, segments, durationMs, "Opening", "Ending", "Recap", "Episode")
 
     @Test
     fun `no segments leave chapters unchanged`() {
@@ -200,7 +289,7 @@ class SkipSegmentsLogicTest {
     fun `band colors and button options match the settings`() {
         assertEquals(6, SkipSegmentsLogic.BAND_COLORS.size)
         assertEquals(0x96FFC400.toInt(), SkipSegmentsLogic.BAND_COLORS[0])
-        assertEquals(listOf(0, 5, 10, 15, 30), SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS.toList())
+        assertEquals(listOf(1, 2, 3, 4, 5, 10, 15, 20, 30, 0), SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS.toList())
     }
 
     @Test

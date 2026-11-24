@@ -110,7 +110,7 @@ object IntentUtils {
             knownPositionMs = parseItemPositions(headers)[0] ?: 0L,
             endingOverlay = audioOverlays[0],
             skipSegments = skipSegments[0]?.first ?: emptyList(),
-            skipSegmentsUrl = skipSegments[0]?.second
+            skipSegmentsUrls = skipSegments[0]?.second.orEmpty()
         )
 
         // A single URL may point at an M3U list; keep the caller's start index
@@ -177,7 +177,7 @@ object IntentUtils {
                     knownPositionMs = itemPositions[i] ?: 0L,
                     endingOverlay = audioOverlays[i],
                     skipSegments = skipSegments[i]?.first ?: emptyList(),
-                    skipSegmentsUrl = skipSegments[i]?.second
+                    skipSegmentsUrls = skipSegments[i]?.second.orEmpty()
                 )
             )
         }
@@ -323,32 +323,40 @@ object IntentUtils {
 
     /**
      * X-DDD-Segments: {"0":[{"type":"op","startTime":0,"endTime":89},...],"1":"https://...",
-     * "2":{"segments":[...],"url":"https://..."}} — для элемента плейлиста готовые сегменты пропуска,
-     * адрес, откуда плеер скачает их сам, или то и другое (объект, ключи необязательны).
+     * "2":{"segments":[...],"url":"https://..." или ["https://...","https://..."]}} — для элемента плейлиста
+     * готовые сегменты пропуска, адреса, откуда плеер скачает их сам (по порядку, до первого с сегментами),
+     * или то и другое (объект, ключи необязательны).
      */
-    private fun parseSkipSegments(headers: Map<String, String>): Map<Int, Pair<List<SkipSegment>, String?>> {
+    private fun parseSkipSegments(headers: Map<String, String>): Map<Int, Pair<List<SkipSegment>, List<String>>> {
         val obj = headerJson(headers, SEGMENTS_HEADER) ?: return emptyMap()
-        val result = mutableMapOf<Int, Pair<List<SkipSegment>, String?>>()
+        val result = mutableMapOf<Int, Pair<List<SkipSegment>, List<String>>>()
         val keys = obj.keys()
         while (keys.hasNext()) {
             val key = keys.next()
             val index = key.toIntOrNull() ?: continue
-            val (segments, url) = when (val value = obj.opt(key)) {
-                is JSONArray -> Pair(SkipSegmentsLogic.parseInline(value), null)
-                is String -> Pair(emptyList(), httpUrlOrNull(value))
+            val (segments, urls) = when (val value = obj.opt(key)) {
+                is JSONArray -> Pair(SkipSegmentsLogic.parseInline(value), emptyList())
+                is String -> Pair(emptyList(), httpUrls(value))
                 is JSONObject -> Pair(
                     value.optJSONArray("segments")?.let { SkipSegmentsLogic.parseInline(it) }.orEmpty(),
-                    httpUrlOrNull(value.optString("url"))
+                    httpUrls(value.opt("url"))
                 )
                 else -> continue
             }
-            if (segments.isNotEmpty() || url != null) result[index] = Pair(segments, url)
+            if (segments.isNotEmpty() || urls.isNotEmpty()) result[index] = Pair(segments, urls)
         }
         return result
     }
 
-    private fun httpUrlOrNull(value: String): String? =
-        value.trim().takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
+    /** Адрес-строка или массив адресов; не http(s) отбрасываются. */
+    private fun httpUrls(value: Any?): List<String> {
+        val raw = when (value) {
+            is String -> listOf(value)
+            is JSONArray -> (0 until value.length()).mapNotNull { value.optString(it, null) }
+            else -> emptyList()
+        }
+        return raw.map { it.trim() }.filter { it.startsWith("http://", true) || it.startsWith("https://", true) }
+    }
 
     /**
      * Карта "индекс серии в video_list" -> адрес, отдающий список качеств.

@@ -1658,7 +1658,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _activeSkipSegment.value = null
         _skipSegments.value = item?.skipSegments.orEmpty()
         rebuildChapters()
-        val url = item?.skipSegmentsUrl ?: return
+        val urls = item?.skipSegmentsUrls.orEmpty()
+        if (item == null || urls.isEmpty()) return
         val inline = item.skipSegments
 
         skipSegmentsJob = viewModelScope.launch {
@@ -1674,9 +1675,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 delay(250L)
             }
-            val target = SkipSegmentsLogic.urlWithDuration(url, durationMs)
+            // Адреса по порядку, до первого ответа с опенингом, иначе первый непустой (например, TheIntroDB, затем IntroDB)
             val list = withContext(Dispatchers.IO) {
-                urlQualityLoader.fetch(target)?.let { SkipSegmentsLogic.parse(it) }.orEmpty()
+                SkipSegmentsLogic.firstNonEmpty(urls) { url ->
+                    urlQualityLoader.fetch(SkipSegmentsLogic.urlWithDuration(url, durationMs))
+                        ?.let { SkipSegmentsLogic.parse(it, durationMs) }.orEmpty()
+                }
             }
             // autoSkipped не сбрасываем: встроенные сегменты в объединенном списке те же, повторно не пропускаются
             val combined = SkipSegmentsLogic.combine(inline, list)
@@ -1775,6 +1779,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             playbackDurationMs(),
             app.getString(R.string.chapter_opening),
             app.getString(R.string.chapter_ending),
+            app.getString(R.string.chapter_recap),
             app.getString(R.string.chapter_episode)
         )
         // Только главный поток; без изменений не будим наблюдателей: пересборка идет и на каждом READY

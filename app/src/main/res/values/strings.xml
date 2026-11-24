@@ -558,4 +558,6 @@
     <string name="chapter_opening">Opening</string>
     <string name="chapter_ending">Ending</string>
     <string name="chapter_episode">Episode</string>
+    <string name="skip_recap">Skip recap</string>
+    <string name="chapter_recap">Recap</string>
 </resources>

@@ -527,4 +527,6 @@
     <string name="chapter_opening">片头</string>
     <string name="chapter_ending">片尾</string>
     <string name="chapter_episode">正片</string>
+    <string name="skip_recap">跳过前情回顾</string>
+    <string name="chapter_recap">前情回顾</string>
 </resources>

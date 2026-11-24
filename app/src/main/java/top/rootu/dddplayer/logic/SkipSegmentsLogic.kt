@@ -5,9 +5,10 @@ import org.json.JSONObject
 import top.rootu.dddplayer.model.SkipSegment
 
 /**
- * Сегменты пропуска опенинга/эндинга (X-DDD-Segments). Чистая логика, без плеера.
- * Значение заголовка — объект: индекс серии -> либо массив сегментов
- * [{"type":"op","startTime":..,"endTime":..}] (секунды), либо адрес, откуда плеер скачает их сам.
+ * Сегменты пропуска опенинга/эндинга/пересказа (X-DDD-Segments). Чистая логика, без плеера.
+ * Значение заголовка — объект: индекс серии -> массив сегментов
+ * [{"type":"op","startTime":..,"endTime":..}] (секунды), адрес (или список адресов), откуда плеер скачает их сам,
+ * или объект {"segments":[..],"url":..} с тем и другим. Типы: op, ed, recap.
  */
 object SkipSegmentsLogic {
 
@@ -24,14 +25,19 @@ object SkipSegmentsLogic {
         return result.sortedBy { it.startMs }
     }
 
-    /** Ответ по адресу: {"data":[...]}, AniSkip {"results":[{"interval":{..},"skipType":..}]} или сразу массив. */
-    fun parse(json: String): List<SkipSegment> {
+    /**
+     * Ответ по адресу: {"data":[...]}, AniSkip {"results":[{"interval":{..},"skipType":..}]}, массив,
+     * TheIntroDB v4 {"intro":[{"start_ms","end_ms"}],"recap":[..],"credits":[..]} или IntroDB
+     * {"intro":{..}|null,"recap":..,"outro":..}. Длительность нужна для end_ms: null (до конца видео).
+     */
+    fun parse(json: String, durationMs: Long = 0L): List<SkipSegment> {
         val text = json.trim()
         return try {
             if (text.startsWith("[")) return parseInline(JSONArray(text))
             val root = JSONObject(text)
             root.optJSONArray("data")?.let { return parseInline(it) }
-            val results = root.optJSONArray("results") ?: return emptyList()
+            val results = root.optJSONArray("results")
+            if (results == null) return parseSeries(root, durationMs)
             val list = mutableListOf<SkipSegment>()
             for (i in 0 until results.length()) {
                 val obj = results.optJSONObject(i) ?: continue
@@ -42,6 +48,46 @@ object SkipSegmentsLogic {
         } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    // Ключи сериальных баз -> тип сегмента; preview и post_credits не пропускаем
+    private val seriesTypes = mapOf("intro" to "op", "recap" to "recap", "credits" to "ed", "outro" to "ed")
+
+    /** Минимальная длина сегмента из баз сериалов: короче — заглушки вроде recap 0–0. */
+    private const val MIN_SERIES_MS = 5000L
+
+    private fun parseSeries(root: JSONObject, durationMs: Long): List<SkipSegment> {
+        val list = mutableListOf<SkipSegment>()
+        for ((key, type) in seriesTypes) {
+            // TheIntroDB отдает массив записей, IntroDB — одну запись или null
+            val entries = root.optJSONArray(key)?.let { arr -> (0 until arr.length()).mapNotNull { arr.optJSONObject(it) } }
+                ?: listOfNotNull(root.optJSONObject(key))
+            for (obj in entries) {
+                // start_ms: null — с начала, end_ms: null — до конца видео (без длительности отбрасываем)
+                val start = if (obj.isNull("start_ms")) 0L else obj.optLong("start_ms", 0L)
+                val end = if (obj.isNull("end_ms")) durationMs else obj.optLong("end_ms", 0L)
+                if (end <= 0 || start < 0 || end - start < MIN_SERIES_MS) continue
+                // Титры с нуля — заведомо ошибочные данные
+                if (type == "ed" && start == 0L) continue
+                list.add(SkipSegment(type, start, end))
+            }
+        }
+        return list.sortedBy { it.startMs }
+    }
+
+    /**
+     * Результат по списку адресов: первый ответ с опенингом (дальше не запрашиваем). Если опенинга нет нигде,
+     * берется первый непустой ответ: один адрес может отдать только эндинг, а другой — полный набор.
+     */
+    fun firstNonEmpty(urls: List<String>, load: (String) -> List<SkipSegment>): List<SkipSegment> {
+        var firstNonEmpty: List<SkipSegment>? = null
+        for (url in urls) {
+            val list = load(url)
+            if (list.isEmpty()) continue
+            if (list.any { it.type == "op" }) return list
+            if (firstNonEmpty == null) firstNonEmpty = list
+        }
+        return firstNonEmpty.orEmpty()
     }
 
     /** Сегмент, в котором сейчас позиция. В последнюю секунду кнопка уже не нужна. */
@@ -75,7 +121,7 @@ object SkipSegmentsLogic {
     private const val NEAR_MS = 1500L
 
     /**
-     * Главы контейнера плюс сегменты как главы: «Опенинг/Эндинг» на старте сегмента и «Эпизод» на его конце,
+     * Главы контейнера плюс сегменты как главы: «Опенинг/Эндинг/Пересказ» на старте сегмента и «Эпизод» на его конце,
      * чтобы кнопки следующей/предыдущей главы и меню глав работали с ними. Без сегментов список не меняется.
      */
     fun mergeChapters(
@@ -84,6 +130,7 @@ object SkipSegmentsLogic {
         durationMs: Long,
         openingTitle: String,
         endingTitle: String,
+        recapTitle: String,
         episodeTitle: String
     ): List<Chapter> {
         if (segments.isEmpty()) return container
@@ -92,7 +139,12 @@ object SkipSegmentsLogic {
 
         // Сначала все старты: конец одного сегмента не должен вытеснить название соседнего
         for (seg in segments) {
-            if (!hasNear(seg.startMs)) result.add(Chapter(seg.startMs, if (seg.type == "ed") endingTitle else openingTitle))
+            val title = when (seg.type) {
+                "ed" -> endingTitle
+                "recap" -> recapTitle
+                else -> openingTitle
+            }
+            if (!hasNear(seg.startMs)) result.add(Chapter(seg.startMs, title))
         }
         for (seg in segments) {
             if (durationMs > 0 && seg.endMs >= durationMs - 1000) continue
@@ -113,8 +165,11 @@ object SkipSegmentsLogic {
         0xA08E24AA.toInt()  // фиолетовый
     )
 
-    /** Варианты «Кнопка пропуска», с: 0 — весь сегмент. */
-    val BUTTON_SECONDS_OPTIONS = intArrayOf(0, 5, 10, 15, 30)
+    /** Варианты «Кнопка пропуска» в порядке списка, с: 0 — весь сегмент, он последний. */
+    val BUTTON_SECONDS_OPTIONS = intArrayOf(1, 2, 3, 4, 5, 10, 15, 20, 30, 0)
+
+    /** Сохраненное значение вне списка вариантов считается «весь сегмент». */
+    fun normalizeButtonSeconds(seconds: Int): Int = if (seconds in BUTTON_SECONDS_OPTIONS) seconds else 0
 
     /** Сегмент для автопропуска: тот, где позиция, если его еще не пропускали в этой серии. */
     fun autoSkip(segments: List<SkipSegment>, positionMs: Long, skipped: Set<SkipSegment>): SkipSegment? =
@@ -132,11 +187,12 @@ object SkipSegmentsLogic {
             .replace(zeroDuration, "duration=$seconds")
     }
 
-    // op/ed и их «смешанные» варианты у AniSkip; остальное (recap, preview) не пропускаем
+    // op/ed/recap и их «смешанные» варианты у AniSkip; остальное (preview) не пропускаем
     private fun segment(rawType: String, obj: JSONObject): SkipSegment? {
         val type = when (rawType.trim().lowercase()) {
             "op", "mixed-op" -> "op"
             "ed", "mixed-ed" -> "ed"
+            "recap" -> "recap"
             else -> return null
         }
         val start = obj.optDouble("startTime", Double.NaN)

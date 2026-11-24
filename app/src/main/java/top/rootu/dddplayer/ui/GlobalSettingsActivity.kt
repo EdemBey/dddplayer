@@ -36,6 +36,7 @@ import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.OpenSourceLicenses
 import top.rootu.dddplayer.logic.SeekStepLogic
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.logic.UpdateInfo
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
@@ -561,8 +562,19 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemSkipSegmentsMarks.setOnClickListener {
             settingsViewModel.toggleSkipSegmentsMarks(!switchSkipSegmentsMarks.isChecked)
         }
-        itemSkipSegmentsColor.setOnClickListener { settingsViewModel.cycleSkipSegmentsColor() }
-        itemSkipSegmentsButton.setOnClickListener { settingsViewModel.cycleSkipSegmentsButtonSeconds() }
+        itemSkipSegmentsColor.setOnClickListener {
+            val names = skipSegmentsColorNames.map { getString(it) }
+            showSingleChoiceDialog(getString(R.string.settings_skip_segments_color), names, settingsViewModel.skipSegmentsColor.value ?: 0) {
+                settingsViewModel.setSkipSegmentsColor(it)
+            }
+        }
+        itemSkipSegmentsButton.setOnClickListener {
+            val options = SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS
+            val current = options.indexOf(settingsViewModel.skipSegmentsButtonSeconds.value ?: 0)
+            showSingleChoiceDialog(getString(R.string.settings_skip_segments_button), options.map { skipButtonSecondsLabel(it) }, current) {
+                settingsViewModel.setSkipSegmentsButtonSeconds(options[it])
+            }
+        }
 
         // Boost
         itemBoost.setOnClickListener { settingsViewModel.cycleLoudnessBoost() }
@@ -830,10 +842,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textSkipSegmentsColorValue.setText(skipSegmentsColorNames.getOrElse(index) { skipSegmentsColorNames[0] })
         }
         settingsViewModel.skipSegmentsButtonSeconds.observe(this) { seconds ->
-            textSkipSegmentsButtonValue.text = if (seconds == 0)
-                getString(R.string.skip_segments_button_whole)
-            else
-                getString(R.string.seek_step_seconds_format, seconds)
+            textSkipSegmentsButtonValue.text = skipButtonSecondsLabel(seconds)
         }
         settingsViewModel.loudnessBoost.observe(this) { boost ->
             textBoostValue.text = if (boost == 0)
@@ -1121,6 +1130,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         SettingsRepository.BUTTON_CHAPTER_NEXT -> getString(R.string.chapter_next)
         else -> key
     }
+
+    private fun skipButtonSecondsLabel(seconds: Int): String =
+        if (seconds == 0) getString(R.string.skip_segments_button_whole)
+        else getString(R.string.seek_step_seconds_format, seconds)
 
     private fun formatSeekStep(ms: Int): String = if (ms < 1000) {
         getString(R.string.seek_step_half_second)

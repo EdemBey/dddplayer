@@ -513,4 +513,6 @@
     <string name="chapter_opening">Апенінг</string>
     <string name="chapter_ending">Эндынг</string>
     <string name="chapter_episode">Эпізод</string>
+    <string name="skip_recap">Прапусціць пераказ</string>
+    <string name="chapter_recap">Пераказ</string>
 </resources>

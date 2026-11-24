@@ -9,7 +9,6 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
-import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
 
@@ -352,18 +351,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isSkipSegmentsMarksEnabled.value = enabled
     }
 
-    fun cycleSkipSegmentsColor() {
-        val next = ((_skipSegmentsColor.value ?: 0) + 1) % SkipSegmentsLogic.BAND_COLORS.size
-        repository.setSkipSegmentsColor(next)
-        _skipSegmentsColor.value = next
+    fun setSkipSegmentsColor(index: Int) {
+        repository.setSkipSegmentsColor(index)
+        _skipSegmentsColor.value = index
     }
 
-    fun cycleSkipSegmentsButtonSeconds() {
-        val options = SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS
-        val index = options.indexOf(_skipSegmentsButtonSeconds.value ?: 0)
-        val next = options[(index + 1) % options.size]
-        repository.setSkipSegmentsButtonSeconds(next)
-        _skipSegmentsButtonSeconds.value = next
+    fun setSkipSegmentsButtonSeconds(seconds: Int) {
+        repository.setSkipSegmentsButtonSeconds(seconds)
+        _skipSegmentsButtonSeconds.value = seconds
     }
 
     fun setSeekStepMs(ms: Int) {

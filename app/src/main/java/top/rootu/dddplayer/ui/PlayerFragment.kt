@@ -1180,7 +1180,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.activeSkipSegment.observe(viewLifecycleOwner) { segment ->
             ui.skipSegmentButton.isVisible = segment != null
             if (segment != null) {
-                ui.skipSegmentButton.setText(if (segment.type == "ed") R.string.skip_ending else R.string.skip_opening)
+                ui.skipSegmentButton.setText(
+                    when (segment.type) {
+                        "ed" -> R.string.skip_ending
+                        "recap" -> R.string.skip_recap
+                        else -> R.string.skip_opening
+                    }
+                )
             }
         }
         viewModel.skipSegments.observe(viewLifecycleOwner) { segments ->

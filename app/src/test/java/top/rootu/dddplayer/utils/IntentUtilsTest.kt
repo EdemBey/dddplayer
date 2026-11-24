@@ -302,11 +302,11 @@ class IntentUtilsTest {
         val (items, _) = IntentUtils.parseIntent(context, intent)
 
         assertEquals(listOf(SkipSegment("op", 0, 89_000)), items[0].skipSegments)
-        assertEquals(null, items[0].skipSegmentsUrl)
+        assertEquals(emptyList<String>(), items[0].skipSegmentsUrls)
         assertEquals(emptyList<SkipSegment>(), items[1].skipSegments)
-        assertEquals("https://api.aniskip.com/v2/skip-times/20/2?episodeLength=0", items[1].skipSegmentsUrl)
+        assertEquals(listOf("https://api.aniskip.com/v2/skip-times/20/2?episodeLength=0"), items[1].skipSegmentsUrls)
         // Не http(s) — не качаем
-        assertEquals(null, items[2].skipSegmentsUrl)
+        assertEquals(emptyList<String>(), items[2].skipSegmentsUrls)
         items.forEach { item ->
             assertTrue(item.headers.keys.none { it.startsWith("X-DDD-", true) })
         }
@@ -329,11 +329,34 @@ class IntentUtilsTest {
         val (items, _) = IntentUtils.parseIntent(context, intent)
 
         assertEquals(listOf(SkipSegment("ed", 904_000, 960_000)), items[0].skipSegments)
-        assertEquals("https://x/skip?duration=0", items[0].skipSegmentsUrl)
+        assertEquals(listOf("https://x/skip?duration=0"), items[0].skipSegmentsUrls)
         assertEquals(emptyList<SkipSegment>(), items[1].skipSegments)
-        assertEquals("https://x/s2", items[1].skipSegmentsUrl)
+        assertEquals(listOf("https://x/s2"), items[1].skipSegmentsUrls)
         assertEquals(listOf(SkipSegment("op", 0, 89_000)), items[2].skipSegments)
-        assertEquals(null, items[2].skipSegmentsUrl)
+        assertEquals(emptyList<String>(), items[2].skipSegmentsUrls)
+    }
+
+    @Test
+    fun `skip segments url may be a list, non-http entries are dropped`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Segments",
+                    """{"0":{"url":["https://api.theintrodb.org/v4/media?tmdb_id=1","ftp://x","https://api.introdb.app/segments?imdb_id=tt1"]},"1":{"url":["ftp://x"]}}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals(
+            listOf("https://api.theintrodb.org/v4/media?tmdb_id=1", "https://api.introdb.app/segments?imdb_id=tt1"),
+            items[0].skipSegmentsUrls
+        )
+        assertEquals(emptyList<String>(), items[1].skipSegmentsUrls)
     }
 
     @Test

@@ -226,6 +226,9 @@ class SettingsRepositoryTest {
         assertFalse(repo.isSkipSegmentsMarksEnabled())
         assertEquals(4, repo.getSkipSegmentsColor())
         assertEquals(15, repo.getSkipSegmentsButtonSeconds())
+        // Значение вне списка вариантов читается как «весь сегмент»
+        repo.setSkipSegmentsButtonSeconds(7)
+        assertEquals(0, repo.getSkipSegmentsButtonSeconds())
     }
 
     @Test
