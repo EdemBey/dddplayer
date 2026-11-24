@@ -313,6 +313,30 @@ class IntentUtilsTest {
     }
 
     @Test
+    fun `skip segments object form gives items both segments and an address`() {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = videos[0]
+            putExtra("video_list", videos)
+            putExtra(
+                "headers",
+                arrayOf(
+                    "X-DDD-Segments",
+                    """{"0":{"segments":[{"type":"ed","startTime":904,"endTime":960}],"url":"https://x/skip?duration=0"},"1":{"url":"https://x/s2"},"2":{"segments":[{"type":"op","startTime":0,"endTime":89}],"url":"ftp://x"}}"""
+                )
+            )
+        }
+
+        val (items, _) = IntentUtils.parseIntent(context, intent)
+
+        assertEquals(listOf(SkipSegment("ed", 904_000, 960_000)), items[0].skipSegments)
+        assertEquals("https://x/skip?duration=0", items[0].skipSegmentsUrl)
+        assertEquals(emptyList<SkipSegment>(), items[1].skipSegments)
+        assertEquals("https://x/s2", items[1].skipSegmentsUrl)
+        assertEquals(listOf(SkipSegment("op", 0, 89_000)), items[2].skipSegments)
+        assertEquals(null, items[2].skipSegmentsUrl)
+    }
+
+    @Test
     fun `voiceover path header gives every item its own address and is not sent to the server`() {
         val streams = arrayOf(
             Uri.parse("https://helper.example/play.m3u8?q=1080&url=https%3A%2F%2Fsite%2F%3Fepisode%3D1%26audio%3DA%2520B"),

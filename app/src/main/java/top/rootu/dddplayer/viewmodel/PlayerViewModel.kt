@@ -1646,7 +1646,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** Сегменты пропуска серии: готовые из интента или скачанные по адресу, когда известна длительность. */
+    /**
+     * Сегменты пропуска серии: готовые из интента показываются сразу, скачанные по адресу (когда известна
+     * длительность) добавляются к ним по правилу SkipSegmentsLogic.combine.
+     */
     private fun loadSkipSegments(item: MediaItem?) {
         if (item?.uuid == skipSegmentsItemId) return
         skipSegmentsItemId = item?.uuid
@@ -1656,7 +1659,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _skipSegments.value = item?.skipSegments.orEmpty()
         rebuildChapters()
         val url = item?.skipSegmentsUrl ?: return
-        if (item.skipSegments.isNotEmpty()) return
+        val inline = item.skipSegments
 
         skipSegmentsJob = viewModelScope.launch {
             // AniSkip подбирает тайминги по длине серии, поэтому ждем длительность (как главы ждут READY)
@@ -1675,8 +1678,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val list = withContext(Dispatchers.IO) {
                 urlQualityLoader.fetch(target)?.let { SkipSegmentsLogic.parse(it) }.orEmpty()
             }
-            if (skipSegmentsItemId == item.uuid) {
-                _skipSegments.value = list
+            // autoSkipped не сбрасываем: встроенные сегменты в объединенном списке те же, повторно не пропускаются
+            val combined = SkipSegmentsLogic.combine(inline, list)
+            if (skipSegmentsItemId == item.uuid && combined != _skipSegments.value) {
+                _skipSegments.value = combined
                 rebuildChapters()
             }
         }

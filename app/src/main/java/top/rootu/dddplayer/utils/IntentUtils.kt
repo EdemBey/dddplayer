@@ -322,8 +322,9 @@ object IntentUtils {
     }
 
     /**
-     * X-DDD-Segments: {"0":[{"type":"op","startTime":0,"endTime":89},...],"1":"https://..."} —
-     * для элемента плейлиста готовые сегменты пропуска или адрес, откуда плеер скачает их сам.
+     * X-DDD-Segments: {"0":[{"type":"op","startTime":0,"endTime":89},...],"1":"https://...",
+     * "2":{"segments":[...],"url":"https://..."}} — для элемента плейлиста готовые сегменты пропуска,
+     * адрес, откуда плеер скачает их сам, или то и другое (объект, ключи необязательны).
      */
     private fun parseSkipSegments(headers: Map<String, String>): Map<Int, Pair<List<SkipSegment>, String?>> {
         val obj = headerJson(headers, SEGMENTS_HEADER) ?: return emptyMap()
@@ -332,15 +333,22 @@ object IntentUtils {
         while (keys.hasNext()) {
             val key = keys.next()
             val index = key.toIntOrNull() ?: continue
-            when (val value = obj.opt(key)) {
-                is JSONArray -> SkipSegmentsLogic.parseInline(value).takeIf { it.isNotEmpty() }
-                    ?.let { result[index] = Pair(it, null) }
-                is String -> value.trim().takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
-                    ?.let { result[index] = Pair(emptyList(), it) }
+            val (segments, url) = when (val value = obj.opt(key)) {
+                is JSONArray -> Pair(SkipSegmentsLogic.parseInline(value), null)
+                is String -> Pair(emptyList(), httpUrlOrNull(value))
+                is JSONObject -> Pair(
+                    value.optJSONArray("segments")?.let { SkipSegmentsLogic.parseInline(it) }.orEmpty(),
+                    httpUrlOrNull(value.optString("url"))
+                )
+                else -> continue
             }
+            if (segments.isNotEmpty() || url != null) result[index] = Pair(segments, url)
         }
         return result
     }
+
+    private fun httpUrlOrNull(value: String): String? =
+        value.trim().takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
 
     /**
      * Карта "индекс серии в video_list" -> адрес, отдающий список качеств.

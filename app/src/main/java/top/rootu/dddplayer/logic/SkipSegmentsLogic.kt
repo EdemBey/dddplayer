@@ -52,6 +52,25 @@ object SkipSegmentsLogic {
     fun buttonSegment(segments: List<SkipSegment>, positionMs: Long, buttonSeconds: Int): SkipSegment? =
         active(segments, positionMs)?.takeIf { buttonSeconds <= 0 || positionMs < it.startMs + buttonSeconds * 1000L }
 
+    /** Перекрытие скачанного сегмента со встроенным, больше которого встроенный (YummyAnime) побеждает. */
+    private const val OVERLAP_MS = 5000L
+
+    /**
+     * Два источника таймингов серии: встроенные сегменты остаются все, скачанные (AniSkip/kopenkin)
+     * добавляются, если не перекрывают встроенный больше чем на 5 с. Касание и малое перекрытие — оба сегмента.
+     */
+    fun combine(inline: List<SkipSegment>, downloaded: List<SkipSegment>): List<SkipSegment> {
+        if (inline.isEmpty() || downloaded.isEmpty()) return inline.ifEmpty { downloaded }
+        val extra = downloaded.filter { d ->
+            // Целиком внутри встроенного тоже отбрасываем: короткий скачанный не должен дробить встроенный
+            inline.none {
+                minOf(it.endMs, d.endMs) - maxOf(it.startMs, d.startMs) > OVERLAP_MS ||
+                    (d.startMs >= it.startMs && d.endMs <= it.endMs)
+            }
+        }
+        return (inline + extra).sortedBy { it.startMs }
+    }
+
     /** Окно, в котором две главы считаются одной. */
     private const val NEAR_MS = 1500L
 

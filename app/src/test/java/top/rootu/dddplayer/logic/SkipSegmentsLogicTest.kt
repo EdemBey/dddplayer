@@ -72,6 +72,42 @@ class SkipSegmentsLogicTest {
     }
 
     @Test
+    fun `two endings in a row give two Ending chapters and no stray Episode between them`() {
+        // Песня (AniSkip) 13:40–15:05, затем титры (YummyAnime) 15:04–16:00
+        val song = SkipSegment("ed", 820_000, 905_000)
+        val credits = SkipSegment("ed", 904_000, 960_000)
+        assertEquals(
+            listOf(Chapter(0, "Episode"), Chapter(820_000, "Ending"), Chapter(904_000, "Ending"), Chapter(960_000, "Episode")),
+            merge(emptyList(), listOf(song, credits))
+        )
+        // Зазор больше 1,5 с: между ними остается «Эпизод»
+        val gap = merge(emptyList(), listOf(song, SkipSegment("ed", 910_000, 960_000)))
+        assertEquals(listOf(0L, 820_000L, 905_000L, 910_000L, 960_000L), gap.map { it.startMs })
+        // Последние титры до конца видео: хвостовой главы нет
+        val tail = merge(emptyList(), listOf(song, SkipSegment("ed", 904_000, 1399_500)))
+        assertEquals(listOf(0L, 820_000L, 904_000L), tail.map { it.startMs })
+    }
+
+    @Test
+    fun `combine keeps both sources unless they overlap by more than 5 s`() {
+        val yummy = SkipSegment("ed", 904_000, 960_000)
+        val aniskip = SkipSegment("ed", 820_000, 905_000)
+        // Перекрытие 1 с: оба
+        assertEquals(listOf(aniskip, yummy), SkipSegmentsLogic.combine(listOf(yummy), listOf(aniskip)))
+        // Ровно 5 с: еще оба
+        val five = SkipSegment("ed", 820_000, 909_000)
+        assertEquals(listOf(five, yummy), SkipSegmentsLogic.combine(listOf(yummy), listOf(five)))
+        // 60 с перекрытия: встроенный побеждает
+        val yummyOp = SkipSegment("op", 0, 90_000)
+        assertEquals(listOf(yummyOp), SkipSegmentsLogic.combine(listOf(yummyOp), listOf(SkipSegment("op", 30_000, 120_000))))
+        // Короткий скачанный целиком внутри встроенного: отбрасывается, хотя перекрытие меньше 5 с
+        assertEquals(listOf(yummyOp), SkipSegmentsLogic.combine(listOf(yummyOp), listOf(SkipSegment("op", 0, 4_000))))
+        // Один из источников пуст
+        assertEquals(listOf(aniskip), SkipSegmentsLogic.combine(emptyList(), listOf(aniskip)))
+        assertEquals(listOf(yummy), SkipSegmentsLogic.combine(listOf(yummy), emptyList()))
+    }
+
+    @Test
     fun `ending right after an opening keeps its title`() {
         val result = merge(emptyList(), listOf(SkipSegment("op", 60_000, 150_000), SkipSegment("ed", 150_500, 240_000)))
         assertEquals("Ending", result.single { it.startMs == 150_500L }.title)
