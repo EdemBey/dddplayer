@@ -1,10 +1,15 @@
 package top.rootu.dddplayer.logic
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 @RunWith(RobolectricTestRunner::class)
 class UrlQualityLoaderTest {
@@ -102,5 +107,16 @@ class UrlQualityLoaderTest {
         assertTrue(loader.parseVoiceovers("").isEmpty())
         assertTrue(loader.parseVoiceovers("""{"voiceovers":[]}""").isEmpty())
         assertTrue(loader.parseVoiceovers("""{"ok":true}""").isEmpty())
+    }
+
+    @Test
+    fun `fetch refuses bodies larger than the limit`() {
+        fun loaderAnswering(text: String) = UrlQualityLoader(OkHttpClient.Builder().addInterceptor { chain ->
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(text.toResponseBody()).build()
+        }.build())
+        assertEquals("{}", loaderAnswering("{}").fetch("https://x/a"))
+        // Ссылка на видео по ошибке: не читаем гигабайты в память
+        assertNull(loaderAnswering("x".repeat((UrlQualityLoader.MAX_BODY_BYTES + 1).toInt())).fetch("https://x/b"))
     }
 }

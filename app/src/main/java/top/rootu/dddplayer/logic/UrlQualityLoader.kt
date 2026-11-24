@@ -26,10 +26,17 @@ import java.util.concurrent.TimeUnit
  *  - duplicate quality labels between providers are dropped, so the faster
  *    provider always wins.
  */
-class UrlQualityLoader {
+class UrlQualityLoader(private val client: OkHttpClient = defaultClient()) {
 
     companion object {
         private const val TAG = "DDDQuality"
+        const val MAX_BODY_BYTES = 2L * 1024 * 1024
+
+        private fun defaultClient() = OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(15, TimeUnit.SECONDS)
+            .build()
 
         // Same order as online_mod's providerPriority
         private val PROVIDER_PRIORITY = listOf(
@@ -39,11 +46,6 @@ class UrlQualityLoader {
 
     }
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .callTimeout(15, TimeUnit.SECONDS)
-        .build()
 
     private val cache = object : LruCache<String, List<UrlQuality>>(32) {}
 
@@ -76,7 +78,10 @@ class UrlQualityLoader {
                     Log.d(TAG, "HTTP ${response.code} for $descriptorUrl")
                     return null
                 }
-                response.body?.string().orEmpty()
+                // Ответ — небольшой JSON; ссылка на само видео по ошибке не должна читаться в память целиком
+                if (response.body.contentLength() > MAX_BODY_BYTES) return null
+                val body = response.peekBody(MAX_BODY_BYTES + 1)
+                if (body.contentLength() > MAX_BODY_BYTES) null else body.string()
             }
         } catch (e: Exception) {
             Log.d(TAG, "request failed: ${e.message}")
