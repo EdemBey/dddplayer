@@ -55,4 +55,13 @@ class UpdateManagerTest {
             )
         )
     }
+
+    @Test
+    fun `release without an apk asset offers nothing to install`() {
+        val manager = UpdateManager(org.robolectric.RuntimeEnvironment.getApplication())
+        val zipOnly = org.json.JSONArray("""[{"name":"sources.zip"}]""")
+        val withApk = org.json.JSONArray("""[{"name":"notes.txt"},{"name":"app-release.APK"}]""")
+        assertEquals(null, manager.apkAsset(zipOnly))
+        assertEquals("app-release.APK", manager.apkAsset(withApk)?.getString("name"))
+    }
 }

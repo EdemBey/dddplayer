@@ -50,18 +50,7 @@ class UpdateManager(private val context: Context) {
             return@withContext null
         }
 
-        val assets = latest.getJSONArray("assets")
-        if (assets.length() == 0) return@withContext null
-
-        // Ищем ассет .apk, иначе берем первый
-        var apkAsset = assets.getJSONObject(0)
-        for (i in 0 until assets.length()) {
-            val asset = assets.getJSONObject(i)
-            if (asset.getString("name").endsWith(".apk")) {
-                apkAsset = asset
-                break
-            }
-        }
+        val apkAsset = apkAsset(latest.getJSONArray("assets")) ?: return@withContext null
 
         UpdateInfo(
             version = tagName,
@@ -169,6 +158,11 @@ class UpdateManager(private val context: Context) {
         }
         return false
     }
+
+    /** Устанавливать можно только .apk: релиз без него обновлением не считается. */
+    fun apkAsset(assets: JSONArray): JSONObject? =
+        (0 until assets.length()).map { assets.getJSONObject(it) }
+            .firstOrNull { it.optString("name").endsWith(".apk", ignoreCase = true) }
 
     /** Кэш мог остаться от оригинального репозитория: принимаем только свои релизы. */
     fun isOwnRelease(info: UpdateInfo): Boolean =

@@ -36,6 +36,11 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun checkUpdatesAuto() {
+        // Отладочная сборка подписана другим ключом: релиз поверх нее не установится, не предлагаем его
+        if (BuildConfig.DEBUG) {
+            _updateInfo.value = null
+            return
+        }
         viewModelScope.launch {
             val currentVersion = BuildConfig.VERSION_NAME
             var hasUpdate = false
