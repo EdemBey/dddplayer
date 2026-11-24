@@ -196,8 +196,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val voiceoverRequests = mutableSetOf<String>()
     // id озвучки, выбранной пользователем: переносится на следующие серии плейлиста
     private var preferredVoiceoverId: String? = null
+    // Наружу отдаются главы контейнера вместе с опенингом/эндингом (SkipSegmentsLogic.mergeChapters)
     private val _chapters = MutableLiveData<List<Chapter>>(emptyList())
     val chapters: LiveData<List<Chapter>> = _chapters
+    private var containerChapters: List<Chapter> = emptyList()
     private var chaptersJob: kotlinx.coroutines.Job? = null
     private var pendingChaptersUri: String? = null
 
@@ -459,6 +461,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 ioRetryCount = 0 // Сброс счетчика, если видео успешно заиграло
                 cdnFailoverCount = 0
                 _duration.value = player?.duration
+                // Конец эндинга у самого конца видео не получает главу: нужна длительность
+                if (_skipSegments.value.orEmpty().isNotEmpty()) rebuildChapters()
                 // После буферизации или старта обновляем инфо
                 player?.videoFormat?.let { updateVideoInfoBadge(it) }
             }
@@ -1650,6 +1654,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         autoSkipped.clear()
         _activeSkipSegment.value = null
         _skipSegments.value = item?.skipSegments.orEmpty()
+        rebuildChapters()
         val url = item?.skipSegmentsUrl ?: return
         if (item.skipSegments.isNotEmpty()) return
 
@@ -1670,7 +1675,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val list = withContext(Dispatchers.IO) {
                 urlQualityLoader.fetch(target)?.let { SkipSegmentsLogic.parse(it) }.orEmpty()
             }
-            if (skipSegmentsItemId == item.uuid) _skipSegments.value = list
+            if (skipSegmentsItemId == item.uuid) {
+                _skipSegments.value = list
+                rebuildChapters()
+            }
         }
     }
 
@@ -1683,8 +1691,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 return
             }
         }
-        val active = SkipSegmentsLogic.active(segments, positionMs)
-        if (_activeSkipSegment.value != active) _activeSkipSegment.value = active
+        // Кнопка может погаснуть раньше конца сегмента (настройка), а OK по-прежнему пропускает весь сегмент
+        val button = SkipSegmentsLogic.buttonSegment(segments, positionMs, repository.getSkipSegmentsButtonSeconds())
+        if (_activeSkipSegment.value != button) _activeSkipSegment.value = button
     }
 
     /** Кнопка «Пропустить»: перемотка в конец сегмента, в котором позиция сейчас. false — пропускать нечего. */
@@ -1701,7 +1710,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (uri.isNullOrBlank()) {
             chaptersJob?.cancel()
             pendingChaptersUri = null
-            _chapters.postValue(emptyList())
+            setContainerChapters(emptyList())
             return
         }
         // Playlist load and the first item transition ask for the same URL.
@@ -1709,6 +1718,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         chaptersJob?.cancel()
         pendingChaptersUri = uri
+        // Главы прошлой серии не должны склеиваться с сегментами новой (пересборка в loadSkipSegments)
+        containerChapters = emptyList()
         // ExoPlayer may only be touched from the main thread; the blocking HTTP
         // fetch is moved to IO after the player reports READY.
         chaptersJob = viewModelScope.launch {
@@ -1741,8 +1752,28 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 loaded
             }
-            if (pendingChaptersUri == uri) _chapters.postValue(list)
+            if (pendingChaptersUri == uri) setContainerChapters(list)
         }
+    }
+
+    private fun setContainerChapters(list: List<Chapter>) {
+        containerChapters = list
+        rebuildChapters()
+    }
+
+    /** Пересобирает главы при смене глав контейнера, сегментов или длительности. */
+    private fun rebuildChapters() {
+        val app = getApplication<Application>()
+        val merged = SkipSegmentsLogic.mergeChapters(
+            containerChapters,
+            _skipSegments.value.orEmpty(),
+            playbackDurationMs(),
+            app.getString(R.string.chapter_opening),
+            app.getString(R.string.chapter_ending),
+            app.getString(R.string.chapter_episode)
+        )
+        // Только главный поток; без изменений не будим наблюдателей: пересборка идет и на каждом READY
+        if (merged != _chapters.value) _chapters.value = merged
     }
 
     fun getChapterMenuItems(context: Context): List<MenuItem> =

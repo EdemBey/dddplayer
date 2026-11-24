@@ -52,12 +52,19 @@ class GlobalSettingsActivity : AppCompatActivity() {
     // Категория настроек: секция в разметке, название и иконка в списке слева
     private data class SettingsCategory(val sectionId: Int, val titleRes: Int, val iconRes: Int)
 
+    // Названия цветов полосы сегментов; порядок как у SkipSegmentsLogic.BAND_COLORS
+    private val skipSegmentsColorNames = listOf(
+        R.string.skip_color_yellow, R.string.skip_color_white, R.string.skip_color_red,
+        R.string.skip_color_green, R.string.skip_color_blue, R.string.skip_color_purple
+    )
+
     private val categories = listOf(
         SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_settings_play),
         SettingsCategory(R.id.section_ui, R.string.settings_cat_ui, R.drawable.ic_settings_ui),
         SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_settings_video),
         SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_settings_audio),
         SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_settings_subtitles),
+        SettingsCategory(R.id.section_segments, R.string.settings_cat_segments, R.drawable.ic_settings_segments),
         SettingsCategory(R.id.section_3d, R.string.settings_cat_3d, R.drawable.ic_settings_3d),
         SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
         SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings_info)
@@ -113,6 +120,12 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textSkipSilenceDesc: TextView
     private lateinit var itemAutoSkipSegments: LinearLayout
     private lateinit var switchAutoSkipSegments: SwitchCompat
+    private lateinit var itemSkipSegmentsMarks: LinearLayout
+    private lateinit var switchSkipSegmentsMarks: SwitchCompat
+    private lateinit var itemSkipSegmentsColor: LinearLayout
+    private lateinit var textSkipSegmentsColorValue: TextView
+    private lateinit var itemSkipSegmentsButton: LinearLayout
+    private lateinit var textSkipSegmentsButtonValue: TextView
     private lateinit var itemBoost: LinearLayout
     private lateinit var textBoostValue: TextView
     private lateinit var itemAudioLang: LinearLayout
@@ -384,6 +397,12 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textSkipSilenceDesc = findViewById(R.id.text_skip_silence_desc)
         itemAutoSkipSegments = findViewById(R.id.item_auto_skip_segments)
         switchAutoSkipSegments = findViewById(R.id.switch_auto_skip_segments)
+        itemSkipSegmentsMarks = findViewById(R.id.item_skip_segments_marks)
+        switchSkipSegmentsMarks = findViewById(R.id.switch_skip_segments_marks)
+        itemSkipSegmentsColor = findViewById(R.id.item_skip_segments_color)
+        textSkipSegmentsColorValue = findViewById(R.id.text_skip_segments_color_value)
+        itemSkipSegmentsButton = findViewById(R.id.item_skip_segments_button)
+        textSkipSegmentsButtonValue = findViewById(R.id.text_skip_segments_button_value)
         itemBoost = findViewById(R.id.item_boost)
         textBoostValue = findViewById(R.id.text_boost_value)
         itemAudioLang = findViewById(R.id.item_audio_lang)
@@ -539,6 +558,11 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemAutoSkipSegments.setOnClickListener {
             settingsViewModel.toggleAutoSkipSegments(!switchAutoSkipSegments.isChecked)
         }
+        itemSkipSegmentsMarks.setOnClickListener {
+            settingsViewModel.toggleSkipSegmentsMarks(!switchSkipSegmentsMarks.isChecked)
+        }
+        itemSkipSegmentsColor.setOnClickListener { settingsViewModel.cycleSkipSegmentsColor() }
+        itemSkipSegmentsButton.setOnClickListener { settingsViewModel.cycleSkipSegmentsButtonSeconds() }
 
         // Boost
         itemBoost.setOnClickListener { settingsViewModel.cycleLoudnessBoost() }
@@ -798,6 +822,18 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
         settingsViewModel.isAutoSkipSegmentsEnabled.observe(this) { enabled ->
             switchAutoSkipSegments.isChecked = enabled
+        }
+        settingsViewModel.isSkipSegmentsMarksEnabled.observe(this) { enabled ->
+            switchSkipSegmentsMarks.isChecked = enabled
+        }
+        settingsViewModel.skipSegmentsColor.observe(this) { index ->
+            textSkipSegmentsColorValue.setText(skipSegmentsColorNames.getOrElse(index) { skipSegmentsColorNames[0] })
+        }
+        settingsViewModel.skipSegmentsButtonSeconds.observe(this) { seconds ->
+            textSkipSegmentsButtonValue.text = if (seconds == 0)
+                getString(R.string.skip_segments_button_whole)
+            else
+                getString(R.string.seek_step_seconds_format, seconds)
         }
         settingsViewModel.loudnessBoost.observe(this) { boost ->
             textBoostValue.text = if (boost == 0)

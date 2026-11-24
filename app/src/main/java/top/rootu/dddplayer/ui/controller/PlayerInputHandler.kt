@@ -99,8 +99,9 @@ class PlayerInputHandler(
                     onShowPlaylist()
                     return true
                 }
-                // Пока идет опенинг/эндинг, OK пропускает его; на паузе OK по-прежнему запускает видео
-                if (!ui.controlsView.isVisible && viewModel.isPlaying.value == true && viewModel.skipActiveSegment()) return true
+                // Пока видна кнопка «Пропустить», OK пропускает сегмент; на паузе OK по-прежнему запускает видео
+                if (!ui.controlsView.isVisible && viewModel.isPlaying.value == true &&
+                    viewModel.activeSkipSegment.value != null && viewModel.skipActiveSegment()) return true
                 if (!ui.controlsView.isVisible) {
                     when (repo.getOkButtonAction()) {
                         SettingsRepository.OK_ACTION_PAUSE -> viewModel.togglePlayPause()

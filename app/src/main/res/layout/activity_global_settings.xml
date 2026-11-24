@@ -850,35 +850,6 @@
                         android:clickable="false"
                         android:focusable="false" />
                 </LinearLayout>
-
-                <!-- Автопропуск опенингов и эндингов (X-DDD-Segments) -->
-                <LinearLayout
-                    android:id="@+id/item_auto_skip_segments"
-                    style="@style/SettingsItemContainer">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:duplicateParentState="true"
-                        android:orientation="vertical">
-
-                        <TextView
-                            style="@style/SettingsItemTitle"
-                            android:text="@string/settings_auto_skip_segments" />
-
-                        <TextView
-                            style="@style/SettingsItemDesc"
-                            android:text="@string/settings_auto_skip_segments_desc" />
-                    </LinearLayout>
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_auto_skip_segments"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        android:focusable="false" />
-                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -949,6 +920,126 @@
                         <TextView style="@style/SettingsItemDesc" android:text="@string/pref_subtitle_style_desc" />
                     </LinearLayout>
                     <ImageView android:layout_width="24dp" android:layout_height="24dp" android:importantForAccessibility="no" android:src="@drawable/ic_arrow_right" android:duplicateParentState="true" app:tint="@color/selector_settings_secondary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/section_segments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Автопропуск опенингов и эндингов (X-DDD-Segments) -->
+                <LinearLayout
+                    android:id="@+id/item_auto_skip_segments"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_auto_skip_segments" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/settings_auto_skip_segments_desc" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_auto_skip_segments"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Полосы сегментов на полосе прокрутки -->
+                <LinearLayout
+                    android:id="@+id/item_skip_segments_marks"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_skip_segments_marks" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/settings_skip_segments_marks_desc" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_skip_segments_marks"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Цвет полосы -->
+                <LinearLayout
+                    android:id="@+id/item_skip_segments_color"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_skip_segments_color" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/settings_skip_segments_color_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_skip_segments_color_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Жёлтый" />
+                </LinearLayout>
+
+                <!-- Сколько секунд видна кнопка «Пропустить» -->
+                <LinearLayout
+                    android:id="@+id/item_skip_segments_button"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_skip_segments_button" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/settings_skip_segments_button_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_skip_segments_button_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Весь сегмент" />
                 </LinearLayout>
             </LinearLayout>
 

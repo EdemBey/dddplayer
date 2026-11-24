@@ -496,4 +496,21 @@
     <string name="skip_ending">Прапусціць эндынг</string>
     <string name="settings_auto_skip_segments">Прапускаць апенінгі і эндынгі</string>
     <string name="settings_auto_skip_segments_desc">Перамотваць апенінг або эндынг адразу, калі праграма перадала іх таймінгі</string>
+    <string name="settings_cat_segments">Сегменты</string>
+    <string name="settings_skip_segments_marks">Сегменты на паласе перамотвання</string>
+    <string name="settings_skip_segments_marks_desc">Пазначаць апенінгі і эндынгі на паласе перамотвання</string>
+    <string name="settings_skip_segments_color">Колер сегментаў</string>
+    <string name="settings_skip_segments_color_desc">Колер палос сегментаў на паласе перамотвання</string>
+    <string name="settings_skip_segments_button">Кнопка «Прапусціць»</string>
+    <string name="settings_skip_segments_button_desc">Колькі кнопка бачная пасля пачатку сегмента; OK, як і раней, прапускае ўвесь сегмент</string>
+    <string name="skip_segments_button_whole">Увесь сегмент</string>
+    <string name="skip_color_yellow">Жоўты</string>
+    <string name="skip_color_white">Белы</string>
+    <string name="skip_color_red">Чырвоны</string>
+    <string name="skip_color_green">Зялёны</string>
+    <string name="skip_color_blue">Сіні</string>
+    <string name="skip_color_purple">Фіялетавы</string>
+    <string name="chapter_opening">Апенінг</string>
+    <string name="chapter_ending">Эндынг</string>
+    <string name="chapter_episode">Эпізод</string>
 </resources>

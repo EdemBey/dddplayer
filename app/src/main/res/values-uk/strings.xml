@@ -496,4 +496,21 @@
     <string name="skip_ending">Пропустити ендінг</string>
     <string name="settings_auto_skip_segments">Пропускати опенінги та ендінги</string>
     <string name="settings_auto_skip_segments_desc">Перемотувати опенінг або ендінг одразу, якщо застосунок передав їхні таймінги</string>
+    <string name="settings_cat_segments">Сегменти</string>
+    <string name="settings_skip_segments_marks">Сегменти на смузі перемотування</string>
+    <string name="settings_skip_segments_marks_desc">Позначати опенінги та ендінги на смузі перемотування</string>
+    <string name="settings_skip_segments_color">Колір сегментів</string>
+    <string name="settings_skip_segments_color_desc">Колір смуг сегментів на смузі перемотування</string>
+    <string name="settings_skip_segments_button">Кнопка «Пропустити»</string>
+    <string name="settings_skip_segments_button_desc">Скільки кнопка видна після початку сегмента; OK, як і раніше, пропускає весь сегмент</string>
+    <string name="skip_segments_button_whole">Весь сегмент</string>
+    <string name="skip_color_yellow">Жовтий</string>
+    <string name="skip_color_white">Білий</string>
+    <string name="skip_color_red">Червоний</string>
+    <string name="skip_color_green">Зелений</string>
+    <string name="skip_color_blue">Синій</string>
+    <string name="skip_color_purple">Фіолетовий</string>
+    <string name="chapter_opening">Опенінг</string>
+    <string name="chapter_ending">Ендінг</string>
+    <string name="chapter_episode">Епізод</string>
 </resources>

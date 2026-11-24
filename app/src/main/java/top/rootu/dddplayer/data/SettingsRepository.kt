@@ -441,6 +441,18 @@ class SettingsRepository private constructor(context: Context) {
     fun isAutoSkipSegmentsEnabled(): Boolean = prefs.getBoolean("auto_skip_segments", false)
     fun setAutoSkipSegmentsEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_skip_segments", enabled) }
 
+    // Полосы сегментов на полосе прокрутки; включены по умолчанию
+    fun isSkipSegmentsMarksEnabled(): Boolean = prefs.getBoolean("skip_segments_marks", true)
+    fun setSkipSegmentsMarksEnabled(enabled: Boolean) = prefs.edit { putBoolean("skip_segments_marks", enabled) }
+
+    // Цвет полосы: индекс в SkipSegmentsLogic.BAND_COLORS, 0 — жёлтый
+    fun getSkipSegmentsColor(): Int = prefs.getInt("skip_segments_color", 0)
+    fun setSkipSegmentsColor(index: Int) = prefs.edit { putInt("skip_segments_color", index) }
+
+    // Сколько секунд после начала сегмента видна кнопка «Пропустить»; 0 — пока идет весь сегмент
+    fun getSkipSegmentsButtonSeconds(): Int = prefs.getInt("skip_segments_button_seconds", 0)
+    fun setSkipSegmentsButtonSeconds(seconds: Int) = prefs.edit { putInt("skip_segments_button_seconds", seconds) }
+
     fun getPreferredAudioLang(): String = prefs.getString("pref_audio_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredAudioLang(lang: String) = prefs.edit { putString("pref_audio_lang", lang) }
 

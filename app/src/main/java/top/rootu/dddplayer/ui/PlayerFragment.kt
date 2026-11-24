@@ -45,12 +45,14 @@ import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.model.ResizeMode
+import top.rootu.dddplayer.model.SkipSegment
 import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.OnSurfaceReadyListener
@@ -1162,7 +1164,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 viewModel.chapters.value.orEmpty().map { it.startMs },
                 duration
             )
-            ui.seekBar.setSkipSegments(viewModel.skipSegments.value.orEmpty(), duration)
+            applySkipSegmentsMarks(duration = duration)
             // Обновляем метки при изменении длительности
             val current = viewModel.currentPosition.value ?: 0L
             updateTimeLabelsUI(current)
@@ -1182,7 +1184,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             }
         }
         viewModel.skipSegments.observe(viewLifecycleOwner) { segments ->
-            ui.seekBar.setSkipSegments(segments, viewModel.duration.value ?: 0L)
+            applySkipSegmentsMarks(segments)
         }
 
         viewModel.chapters.observe(viewLifecycleOwner) { chapters ->
@@ -1806,6 +1808,17 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
 
+    /** Полосы сегментов на полосе прокрутки: цвет и показ берем из настроек, выключено — пустой список. */
+    private fun applySkipSegmentsMarks(
+        segments: List<SkipSegment> = viewModel.skipSegments.value.orEmpty(),
+        duration: Long = viewModel.duration.value ?: 0L
+    ) {
+        val repo = SettingsRepository.getInstance(requireContext().applicationContext)
+        val colors = SkipSegmentsLogic.BAND_COLORS
+        ui.seekBar.setSkipColor(colors[repo.getSkipSegmentsColor().coerceIn(colors.indices)])
+        ui.seekBar.setSkipSegments(if (repo.isSkipSegmentsMarksEnabled()) segments else emptyList(), duration)
+    }
+
     override fun onResume() {
         super.onResume()
         // Обновляем настройку свайпа при возврате на экран
@@ -1822,6 +1835,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // Калибровка VR и анаглифа могла измениться в визарде
         viewModel.reloadCalibrationIfChanged()
         applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
+        // Цвет и показ полос сегментов могли измениться в настройках
+        applySkipSegmentsMarks()
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()

@@ -541,4 +541,21 @@
     <string name="skip_ending">Skip ending</string>
     <string name="settings_auto_skip_segments">Skip openings and endings</string>
     <string name="settings_auto_skip_segments_desc">Jump over an opening or ending as soon as it starts, when the app sent its timings</string>
+    <string name="settings_cat_segments">Segments</string>
+    <string name="settings_skip_segments_marks">Segments on the seek bar</string>
+    <string name="settings_skip_segments_marks_desc">Mark openings and endings on the seek bar</string>
+    <string name="settings_skip_segments_color">Segment color</string>
+    <string name="settings_skip_segments_color_desc">Color of the segment bands on the seek bar</string>
+    <string name="settings_skip_segments_button">Skip button</string>
+    <string name="settings_skip_segments_button_desc">How long the button stays after a segment starts; OK still skips the whole segment</string>
+    <string name="skip_segments_button_whole">Whole segment</string>
+    <string name="skip_color_yellow">Yellow</string>
+    <string name="skip_color_white">White</string>
+    <string name="skip_color_red">Red</string>
+    <string name="skip_color_green">Green</string>
+    <string name="skip_color_blue">Blue</string>
+    <string name="skip_color_purple">Purple</string>
+    <string name="chapter_opening">Opening</string>
+    <string name="chapter_ending">Ending</string>
+    <string name="chapter_episode">Episode</string>
 </resources>

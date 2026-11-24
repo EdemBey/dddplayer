@@ -213,6 +213,22 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `skip segments settings default to marks on and no auto skip`() {
+        val repo = repo()
+        assertFalse(repo.isAutoSkipSegmentsEnabled())
+        assertTrue(repo.isSkipSegmentsMarksEnabled())
+        assertEquals(0, repo.getSkipSegmentsColor())
+        assertEquals(0, repo.getSkipSegmentsButtonSeconds())
+
+        repo.setSkipSegmentsMarksEnabled(false)
+        repo.setSkipSegmentsColor(4)
+        repo.setSkipSegmentsButtonSeconds(15)
+        assertFalse(repo.isSkipSegmentsMarksEnabled())
+        assertEquals(4, repo.getSkipSegmentsColor())
+        assertEquals(15, repo.getSkipSegmentsButtonSeconds())
+    }
+
+    @Test
     fun `default 3d mode is anaglyph with stereo detection`() {
         val repo = repo()
         assertTrue(repo.isStereoAutoDetectEnabled())

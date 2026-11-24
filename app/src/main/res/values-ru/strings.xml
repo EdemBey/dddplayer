@@ -538,4 +538,21 @@
     <string name="skip_ending">Пропустить эндинг</string>
     <string name="settings_auto_skip_segments">Пропускать опенинги и эндинги</string>
     <string name="settings_auto_skip_segments_desc">Перематывать опенинг или эндинг сразу, если приложение передало их тайминги</string>
+    <string name="settings_cat_segments">Сегменты</string>
+    <string name="settings_skip_segments_marks">Сегменты на полосе прокрутки</string>
+    <string name="settings_skip_segments_marks_desc">Отмечать опенинги и эндинги на полосе прокрутки</string>
+    <string name="settings_skip_segments_color">Цвет сегментов</string>
+    <string name="settings_skip_segments_color_desc">Цвет полос сегментов на полосе прокрутки</string>
+    <string name="settings_skip_segments_button">Кнопка «Пропустить»</string>
+    <string name="settings_skip_segments_button_desc">Сколько кнопка видна после начала сегмента; OK по-прежнему пропускает весь сегмент</string>
+    <string name="skip_segments_button_whole">Весь сегмент</string>
+    <string name="skip_color_yellow">Жёлтый</string>
+    <string name="skip_color_white">Белый</string>
+    <string name="skip_color_red">Красный</string>
+    <string name="skip_color_green">Зелёный</string>
+    <string name="skip_color_blue">Синий</string>
+    <string name="skip_color_purple">Фиолетовый</string>
+    <string name="chapter_opening">Опенинг</string>
+    <string name="chapter_ending">Эндинг</string>
+    <string name="chapter_episode">Эпизод</string>
 </resources>

@@ -9,6 +9,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
 
@@ -65,6 +66,15 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
 
     private val _isAutoSkipSegmentsEnabled = MutableLiveData(repository.isAutoSkipSegmentsEnabled())
     val isAutoSkipSegmentsEnabled: LiveData<Boolean> = _isAutoSkipSegmentsEnabled
+
+    private val _isSkipSegmentsMarksEnabled = MutableLiveData(repository.isSkipSegmentsMarksEnabled())
+    val isSkipSegmentsMarksEnabled: LiveData<Boolean> = _isSkipSegmentsMarksEnabled
+
+    private val _skipSegmentsColor = MutableLiveData(repository.getSkipSegmentsColor())
+    val skipSegmentsColor: LiveData<Int> = _skipSegmentsColor
+
+    private val _skipSegmentsButtonSeconds = MutableLiveData(repository.getSkipSegmentsButtonSeconds())
+    val skipSegmentsButtonSeconds: LiveData<Int> = _skipSegmentsButtonSeconds
 
     private val _loudnessBoost = MutableLiveData(repository.getLoudnessBoost())
     val loudnessBoost: LiveData<Int> = _loudnessBoost
@@ -335,6 +345,25 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleAutoSkipSegments(enabled: Boolean) {
         repository.setAutoSkipSegmentsEnabled(enabled)
         _isAutoSkipSegmentsEnabled.value = enabled
+    }
+
+    fun toggleSkipSegmentsMarks(enabled: Boolean) {
+        repository.setSkipSegmentsMarksEnabled(enabled)
+        _isSkipSegmentsMarksEnabled.value = enabled
+    }
+
+    fun cycleSkipSegmentsColor() {
+        val next = ((_skipSegmentsColor.value ?: 0) + 1) % SkipSegmentsLogic.BAND_COLORS.size
+        repository.setSkipSegmentsColor(next)
+        _skipSegmentsColor.value = next
+    }
+
+    fun cycleSkipSegmentsButtonSeconds() {
+        val options = SkipSegmentsLogic.BUTTON_SECONDS_OPTIONS
+        val index = options.indexOf(_skipSegmentsButtonSeconds.value ?: 0)
+        val next = options[(index + 1) % options.size]
+        repository.setSkipSegmentsButtonSeconds(next)
+        _skipSegmentsButtonSeconds.value = next
     }
 
     fun setSeekStepMs(ms: Int) {

@@ -47,6 +47,11 @@ class ChapterSeekBar @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setSkipColor(color: Int) {
+        skipPaint.color = color
+        invalidate()
+    }
+
     fun setSkipSegments(segments: List<SkipSegment>, durationMs: Long) {
         skipSegments = segments
         skipDurationMs = durationMs
