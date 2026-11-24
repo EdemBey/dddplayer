@@ -46,7 +46,6 @@ class UrlQualityLoader(private val client: OkHttpClient = defaultClient()) {
 
     }
 
-
     private val cache = object : LruCache<String, List<UrlQuality>>(32) {}
 
     /** Returns an empty list on any failure; callers keep the current stream. */
@@ -212,7 +211,6 @@ class UrlQualityLoader(private val client: OkHttpClient = defaultClient()) {
             ""
         }
     }
-
 
     private fun providerRank(provider: String): Int {
         val name = provider.lowercase()

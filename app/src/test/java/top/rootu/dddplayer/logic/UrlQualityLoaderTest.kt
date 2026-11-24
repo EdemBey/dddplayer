@@ -9,7 +9,10 @@ import org.robolectric.RobolectricTestRunner
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
+import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.asResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
 
 @RunWith(RobolectricTestRunner::class)
 class UrlQualityLoaderTest {
@@ -111,12 +114,15 @@ class UrlQualityLoaderTest {
 
     @Test
     fun `fetch refuses bodies larger than the limit`() {
-        fun loaderAnswering(text: String) = UrlQualityLoader(OkHttpClient.Builder().addInterceptor { chain ->
+        fun loaderAnswering(body: ResponseBody) = UrlQualityLoader(OkHttpClient.Builder().addInterceptor { chain ->
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(text.toResponseBody()).build()
+                .body(body).build()
         }.build())
-        assertEquals("{}", loaderAnswering("{}").fetch("https://x/a"))
-        // Ссылка на видео по ошибке: не читаем гигабайты в память
-        assertNull(loaderAnswering("x".repeat((UrlQualityLoader.MAX_BODY_BYTES + 1).toInt())).fetch("https://x/b"))
+        val big = "x".repeat((UrlQualityLoader.MAX_BODY_BYTES + 1).toInt())
+        assertEquals("{}", loaderAnswering("{}".toResponseBody()).fetch("https://x/a"))
+        // Ссылка на видео по ошибке: не читаем гигабайты в память — ни с известной длиной, ни без нее (chunked)
+        assertNull(loaderAnswering(big.toResponseBody()).fetch("https://x/b"))
+        assertNull(loaderAnswering(Buffer().writeUtf8(big).asResponseBody(null, -1)).fetch("https://x/c"))
+        assertEquals("{}", loaderAnswering(Buffer().writeUtf8("{}").asResponseBody(null, -1)).fetch("https://x/d"))
     }
 }
