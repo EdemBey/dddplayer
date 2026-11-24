@@ -124,6 +124,8 @@ class PlayerUiController(private val rootView: View) {
 
     val buttonUpdate: TextView = controlsView.findViewById(R.id.button_update)
 
+    val skipSegmentButton: TextView = rootView.findViewById(R.id.skip_segment_button)
+
     val seekOverlay: View = rootView.findViewById(R.id.seek_overlay)
     val seekDeltaText: TextView = rootView.findViewById(R.id.seek_delta)
     val seekTargetText: TextView = rootView.findViewById(R.id.seek_target_time)

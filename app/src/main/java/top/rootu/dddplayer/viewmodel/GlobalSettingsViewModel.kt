@@ -63,6 +63,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _isSkipSilenceEnabled = MutableLiveData(repository.isSkipSilenceEnabled())
     val isSkipSilenceEnabled: LiveData<Boolean> = _isSkipSilenceEnabled
 
+    private val _isAutoSkipSegmentsEnabled = MutableLiveData(repository.isAutoSkipSegmentsEnabled())
+    val isAutoSkipSegmentsEnabled: LiveData<Boolean> = _isAutoSkipSegmentsEnabled
+
     private val _loudnessBoost = MutableLiveData(repository.getLoudnessBoost())
     val loudnessBoost: LiveData<Int> = _loudnessBoost
 
@@ -327,6 +330,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleSkipSilence(enabled: Boolean) {
         repository.setSkipSilenceEnabled(enabled)
         _isSkipSilenceEnabled.value = enabled
+    }
+
+    fun toggleAutoSkipSegments(enabled: Boolean) {
+        repository.setAutoSkipSegmentsEnabled(enabled)
+        _isAutoSkipSegmentsEnabled.value = enabled
     }
 
     fun setSeekStepMs(ms: Int) {

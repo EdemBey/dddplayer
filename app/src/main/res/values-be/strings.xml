@@ -492,4 +492,8 @@
     <string name="diag_yes">так</string>
     <string name="diag_no">не</string>
     <string name="diag_builtin">убудаваны</string>
+    <string name="skip_opening">Прапусціць апенінг</string>
+    <string name="skip_ending">Прапусціць эндынг</string>
+    <string name="settings_auto_skip_segments">Прапускаць апенінгі і эндынгі</string>
+    <string name="settings_auto_skip_segments_desc">Перамотваць апенінг або эндынг адразу, калі праграма перадала іх таймінгі</string>
 </resources>

@@ -537,4 +537,8 @@
     <string name="diag_yes">yes</string>
     <string name="diag_no">no</string>
     <string name="diag_builtin">built-in</string>
+    <string name="skip_opening">Skip opening</string>
+    <string name="skip_ending">Skip ending</string>
+    <string name="settings_auto_skip_segments">Skip openings and endings</string>
+    <string name="settings_auto_skip_segments_desc">Jump over an opening or ending as soon as it starts, when the app sent its timings</string>
 </resources>

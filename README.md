@@ -142,6 +142,8 @@ If the calling app can only pass HTTP headers (for example, Lampa Android), use 
 
 Voiceovers that are separate streams of the same video (the audio is muxed into the video, so it cannot be switched as a track) are passed with the `X-DDD-Voiceover-Path` header, for example `/voiceovers`: the voiceovers of an item are returned by the item's own URL with this path (the query stays the same). When there is more than one, the audio button lists them. The response format is described in [docs/INTENT_API.md](docs/INTENT_API.md).
 
+Opening and ending segments are passed with the `X-DDD-Segments` header: `{"0":[{"type":"op","startTime":0,"endTime":89}],"1":"https://..."}` — per playlist item, ready segments in seconds or a URL the player downloads them from. While a segment plays, a "Skip opening/ending" button is shown (OK on a remote), and the seek bar marks the segments. Auto-skip is a setting. Details in [docs/INTENT_API.md](docs/INTENT_API.md).
+
 **Playlist Subtitles Structure:**
 The `video_list.subtitles` extra is an `ArrayList` where each `Bundle` corresponds to a video at the same index.
 Inside each Bundle:

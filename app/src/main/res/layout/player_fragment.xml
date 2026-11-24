@@ -508,6 +508,26 @@
             tools:progress="600" />
     </LinearLayout>
 
+    <!-- Пропуск опенинга/эндинга (X-DDD-Segments) -->
+    <TextView
+        android:id="@+id/skip_segment_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="120dp"
+        android:background="@drawable/bg_player_panel"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="12dp"
+        android:textColor="@color/tv_white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:clickable="true"
+        android:focusable="false"
+        android:visibility="gone"
+        tools:text="@string/skip_opening"
+        tools:visibility="visible" />
+
     <!-- Панель управления  нижняя (Элементы управления) -->
     <include
         android:id="@+id/playback_controls"

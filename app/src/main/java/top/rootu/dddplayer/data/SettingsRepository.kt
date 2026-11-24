@@ -437,6 +437,10 @@ class SettingsRepository private constructor(context: Context) {
     fun isSkipSilenceEnabled(): Boolean = prefs.getBoolean("skip_silence", false)
     fun setSkipSilenceEnabled(enabled: Boolean) = prefs.edit { putBoolean("skip_silence", enabled) }
 
+    // Автопропуск опенингов/эндингов из X-DDD-Segments; по умолчанию только кнопка
+    fun isAutoSkipSegmentsEnabled(): Boolean = prefs.getBoolean("auto_skip_segments", false)
+    fun setAutoSkipSegmentsEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_skip_segments", enabled) }
+
     fun getPreferredAudioLang(): String = prefs.getString("pref_audio_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredAudioLang(lang: String) = prefs.edit { putString("pref_audio_lang", lang) }
 

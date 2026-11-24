@@ -67,7 +67,8 @@ class UrlQualityLoader {
         return qualities
     }
 
-    private fun fetch(descriptorUrl: String): String? {
+    // Тело ответа или null; используется и для сегментов пропуска (X-DDD-Segments)
+    fun fetch(descriptorUrl: String): String? {
         return try {
             val request = Request.Builder().url(descriptorUrl).get().build()
             client.newCall(request).execute().use { response ->

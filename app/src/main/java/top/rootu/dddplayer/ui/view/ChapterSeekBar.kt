@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.Log
 import android.widget.SeekBar
+import top.rootu.dddplayer.model.SkipSegment
 
 /**
  * SeekBar that draws a small tick for every chapter start.
@@ -28,6 +29,13 @@ class ChapterSeekBar @JvmOverloads constructor(
         strokeCap = Paint.Cap.ROUND
     }
 
+    // Опенинг/эндинг (X-DDD-Segments): полупрозрачная полоса поверх дорожки, как и метки глав
+    private val skipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(150, 255, 196, 0)
+    }
+    private var skipSegments: List<SkipSegment> = emptyList()
+    private var skipDurationMs = 0L
+
     private var chapterStarts = LongArray(0)
     private var totalDurationMs = 0L
 
@@ -39,8 +47,15 @@ class ChapterSeekBar @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setSkipSegments(segments: List<SkipSegment>, durationMs: Long) {
+        skipSegments = segments
+        skipDurationMs = durationMs
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        drawSkipSegments(canvas)
         if (chapterStarts.isEmpty() || totalDurationMs <= 0L) return
 
         // Match the thumb centre, not the raw padding: AbsSeekBar positions the
@@ -57,6 +72,22 @@ class ChapterSeekBar @JvmOverloads constructor(
             if (start <= 0L || start >= totalDurationMs) continue
             val x = left + (right - left) * (start.toDouble() / totalDurationMs).toFloat()
             canvas.drawLine(x, centerY - half, x, centerY + half, tickPaint)
+        }
+    }
+
+    private fun drawSkipSegments(canvas: Canvas) {
+        if (skipSegments.isEmpty() || skipDurationMs <= 0L) return
+        val thumbWidth = thumb?.intrinsicWidth ?: 0
+        val inset = if (thumbWidth > 0) thumbWidth / 2f - thumbOffset else 0f
+        val left = paddingLeft + inset
+        val right = width - paddingRight - inset
+        if (right <= left) return
+        val centerY = height / 2f
+        val half = 2f * density
+        for (seg in skipSegments) {
+            val x1 = left + (right - left) * (seg.startMs.coerceIn(0, skipDurationMs).toFloat() / skipDurationMs)
+            val x2 = left + (right - left) * (seg.endMs.coerceIn(0, skipDurationMs).toFloat() / skipDurationMs)
+            if (x2 > x1) canvas.drawRect(x1, centerY - half, x2, centerY + half, skipPaint)
         }
     }
 }

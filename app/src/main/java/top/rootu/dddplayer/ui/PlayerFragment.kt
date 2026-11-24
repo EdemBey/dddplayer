@@ -553,6 +553,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
         updateControlButtonsVisibility()
         ui.buttonBack.setOnClickListener { requireActivity().finish() }
+        ui.skipSegmentButton.setOnClickListener { viewModel.skipActiveSegment() }
         ui.buttonPip.setOnClickListener {
             (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)
         }
@@ -1161,6 +1162,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 viewModel.chapters.value.orEmpty().map { it.startMs },
                 duration
             )
+            ui.seekBar.setSkipSegments(viewModel.skipSegments.value.orEmpty(), duration)
             // Обновляем метки при изменении длительности
             val current = viewModel.currentPosition.value ?: 0L
             updateTimeLabelsUI(current)
@@ -1172,6 +1174,16 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             }
         }
         viewModel.videoTitle.observe(viewLifecycleOwner) { refreshInfoPanelData() }
+
+        viewModel.activeSkipSegment.observe(viewLifecycleOwner) { segment ->
+            ui.skipSegmentButton.isVisible = segment != null
+            if (segment != null) {
+                ui.skipSegmentButton.setText(if (segment.type == "ed") R.string.skip_ending else R.string.skip_opening)
+            }
+        }
+        viewModel.skipSegments.observe(viewLifecycleOwner) { segments ->
+            ui.seekBar.setSkipSegments(segments, viewModel.duration.value ?: 0L)
+        }
 
         viewModel.chapters.observe(viewLifecycleOwner) { chapters ->
             ui.seekBar.setChapterStarts(

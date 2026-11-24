@@ -850,6 +850,35 @@
                         android:clickable="false"
                         android:focusable="false" />
                 </LinearLayout>
+
+                <!-- Автопропуск опенингов и эндингов (X-DDD-Segments) -->
+                <LinearLayout
+                    android:id="@+id/item_auto_skip_segments"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_auto_skip_segments" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/settings_auto_skip_segments_desc" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_auto_skip_segments"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout

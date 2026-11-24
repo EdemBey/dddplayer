@@ -47,6 +47,10 @@ object SkipSegmentsLogic {
     fun active(segments: List<SkipSegment>, positionMs: Long): SkipSegment? =
         segments.firstOrNull { positionMs >= it.startMs && positionMs < it.endMs - 1000 }
 
+    /** Сегмент для автопропуска: тот, где позиция, если его еще не пропускали в этой серии. */
+    fun autoSkip(segments: List<SkipSegment>, positionMs: Long, skipped: Set<SkipSegment>): SkipSegment? =
+        active(segments, positionMs)?.takeIf { it !in skipped }
+
     /** AniSkip отбирает тайминги по длине серии: episodeLength=0 заменяется на длительность в секундах. */
     fun urlWithDuration(url: String, durationMs: Long): String =
         if (durationMs <= 0) url else url.replace(zeroLength, "episodeLength=${durationMs / 1000}")

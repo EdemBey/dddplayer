@@ -65,4 +65,16 @@ class SkipSegmentsLogicTest {
         assertEquals("https://x?episodeLength=0&a=1", SkipSegmentsLogic.urlWithDuration("https://x?episodeLength=0&a=1", 0))
         assertEquals("https://x?episodeLength=90&a=1", SkipSegmentsLogic.urlWithDuration("https://x?episodeLength=0&a=1", 90_000))
     }
+
+    @Test
+    fun `auto skip fires once per segment and not in its last second`() {
+        val list = listOf(opening, ending)
+        val skipped = mutableSetOf<SkipSegment>()
+        assertEquals(opening, SkipSegmentsLogic.autoSkip(list, 0, skipped))
+        skipped.add(opening)
+        // Перемотали назад в опенинг — второй раз не выкидываем
+        assertNull(SkipSegmentsLogic.autoSkip(list, 10_000, skipped))
+        assertNull(SkipSegmentsLogic.autoSkip(list, 1372_000, skipped))
+        assertEquals(ending, SkipSegmentsLogic.autoSkip(list, 1300_000, skipped))
+    }
 }

@@ -506,4 +506,8 @@
     <string name="diag_yes">是</string>
     <string name="diag_no">否</string>
     <string name="diag_builtin">内置</string>
+    <string name="skip_opening">跳过片头</string>
+    <string name="skip_ending">跳过片尾</string>
+    <string name="settings_auto_skip_segments">自动跳过片头和片尾</string>
+    <string name="settings_auto_skip_segments_desc">应用提供了时间点时，片头或片尾一开始就直接跳过</string>
 </resources>

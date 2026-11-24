@@ -492,4 +492,8 @@
     <string name="diag_yes">так</string>
     <string name="diag_no">ні</string>
     <string name="diag_builtin">вбудований</string>
+    <string name="skip_opening">Пропустити опенінг</string>
+    <string name="skip_ending">Пропустити ендінг</string>
+    <string name="settings_auto_skip_segments">Пропускати опенінги та ендінги</string>
+    <string name="settings_auto_skip_segments_desc">Перемотувати опенінг або ендінг одразу, якщо застосунок передав їхні таймінги</string>
 </resources>

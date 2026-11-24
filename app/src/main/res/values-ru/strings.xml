@@ -534,4 +534,8 @@
     <string name="diag_yes">да</string>
     <string name="diag_no">нет</string>
     <string name="diag_builtin">встроенный</string>
+    <string name="skip_opening">Пропустить опенинг</string>
+    <string name="skip_ending">Пропустить эндинг</string>
+    <string name="settings_auto_skip_segments">Пропускать опенинги и эндинги</string>
+    <string name="settings_auto_skip_segments_desc">Перематывать опенинг или эндинг сразу, если приложение передало их тайминги</string>
 </resources>

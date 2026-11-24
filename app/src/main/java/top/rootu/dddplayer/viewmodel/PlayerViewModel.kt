@@ -38,6 +38,7 @@ import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.data.VideoSettings
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SettingsMutator
+import top.rootu.dddplayer.logic.SkipSegmentsLogic
 import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.StreamTypeLogic
 import top.rootu.dddplayer.logic.TrackLogic
@@ -49,6 +50,7 @@ import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.model.ResizeMode
+import top.rootu.dddplayer.model.SkipSegment
 import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleItem
@@ -198,6 +200,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val chapters: LiveData<List<Chapter>> = _chapters
     private var chaptersJob: kotlinx.coroutines.Job? = null
     private var pendingChaptersUri: String? = null
+
+    // Опенинг/эндинг текущей серии (X-DDD-Segments) и сегмент, в котором сейчас позиция
+    private val _skipSegments = MutableLiveData<List<SkipSegment>>(emptyList())
+    val skipSegments: LiveData<List<SkipSegment>> = _skipSegments
+    private val _activeSkipSegment = MutableLiveData<SkipSegment?>(null)
+    val activeSkipSegment: LiveData<SkipSegment?> = _activeSkipSegment
+    private var skipSegmentsJob: kotlinx.coroutines.Job? = null
+    private var skipSegmentsItemId: String? = null
+    // Автопропуск срабатывает на сегмент один раз: перемотка назад в опенинг не выкидывает из него снова
+    private val autoSkipped = mutableSetOf<SkipSegment>()
     private val _playlistUiState = MutableLiveData(PlaylistUiState())
     val playlistUiState: LiveData<PlaylistUiState> = _playlistUiState
 
@@ -399,6 +411,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (!isUserInteracting) {
                     _currentPosition.value = p.currentPosition
                 }
+                updateActiveSkipSegment(p.currentPosition)
                 updateBufferInfo(p)
 
                 // Если AFR еще не сработал, проверяем формат
@@ -784,6 +797,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val currentItem = _currentPlaylist.value?.find { it.uuid == mediaItem?.mediaId }
             // Главы режутся из того же файла: без его заголовков подписанная ссылка отдаст 401/403
             loadChapters(currentUri, currentItem?.headers.orEmpty())
+            loadSkipSegments(currentItem)
             val urlQualities = currentItem?.urlQualities ?: emptyList()
             _urlQualityOptions.value = urlQualities
             _currentQualityName.value = urlQualities.firstOrNull { it.url == currentUri }?.name ?: "Auto"
@@ -1210,6 +1224,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun seekTo(pos: Long) {
         player?.seekTo(pos)
         _currentPosition.value = pos
+        updateActiveSkipSegment(pos)
     }
     fun togglePlayPause() = playerManager.togglePlayPause()
     // Позицию текущей серии сохраняем до перехода: иначе она запишется только при паузе/выходе
@@ -1625,6 +1640,60 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 isSelected = mode == current
             )
         }
+    }
+
+    /** Сегменты пропуска серии: готовые из интента или скачанные по адресу, когда известна длительность. */
+    private fun loadSkipSegments(item: MediaItem?) {
+        if (item?.uuid == skipSegmentsItemId) return
+        skipSegmentsItemId = item?.uuid
+        skipSegmentsJob?.cancel()
+        autoSkipped.clear()
+        _activeSkipSegment.value = null
+        _skipSegments.value = item?.skipSegments.orEmpty()
+        val url = item?.skipSegmentsUrl ?: return
+        if (item.skipSegments.isNotEmpty()) return
+
+        skipSegmentsJob = viewModelScope.launch {
+            // AniSkip подбирает тайминги по длине серии, поэтому ждем длительность (как главы ждут READY)
+            val deadline = SystemClock.elapsedRealtime() + 20_000L
+            var durationMs = 0L
+            while (SystemClock.elapsedRealtime() < deadline) {
+                if (skipSegmentsItemId != item.uuid) return@launch
+                val p = player
+                if (p?.currentMediaItem?.mediaId == item.uuid && p.duration > 0) {
+                    durationMs = p.duration
+                    break
+                }
+                delay(250L)
+            }
+            val target = SkipSegmentsLogic.urlWithDuration(url, durationMs)
+            val list = withContext(Dispatchers.IO) {
+                urlQualityLoader.fetch(target)?.let { SkipSegmentsLogic.parse(it) }.orEmpty()
+            }
+            if (skipSegmentsItemId == item.uuid) _skipSegments.value = list
+        }
+    }
+
+    private fun updateActiveSkipSegment(positionMs: Long) {
+        val segments = _skipSegments.value.orEmpty()
+        if (!isUserInteracting && repository.isAutoSkipSegmentsEnabled()) {
+            SkipSegmentsLogic.autoSkip(segments, positionMs, autoSkipped)?.let {
+                autoSkipped.add(it)
+                seekTo(it.endMs)
+                return
+            }
+        }
+        val active = SkipSegmentsLogic.active(segments, positionMs)
+        if (_activeSkipSegment.value != active) _activeSkipSegment.value = active
+    }
+
+    /** Кнопка «Пропустить»: перемотка в конец сегмента, в котором позиция сейчас. false — пропускать нечего. */
+    fun skipActiveSegment(): Boolean {
+        // Позицию берем у плеера: на паузе и сразу после перемотки кнопка может отставать
+        val position = player?.currentPosition ?: return false
+        val active = SkipSegmentsLogic.active(_skipSegments.value.orEmpty(), position) ?: return false
+        seekTo(active.endMs)
+        return true
     }
 
     /** Reads chapters from the container header; media3 exposes none. */

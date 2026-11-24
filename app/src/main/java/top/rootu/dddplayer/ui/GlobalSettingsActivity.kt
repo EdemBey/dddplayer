@@ -111,6 +111,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemSkipSilence: LinearLayout
     private lateinit var switchSkipSilence: SwitchCompat
     private lateinit var textSkipSilenceDesc: TextView
+    private lateinit var itemAutoSkipSegments: LinearLayout
+    private lateinit var switchAutoSkipSegments: SwitchCompat
     private lateinit var itemBoost: LinearLayout
     private lateinit var textBoostValue: TextView
     private lateinit var itemAudioLang: LinearLayout
@@ -380,6 +382,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemSkipSilence = findViewById(R.id.item_skip_silence)
         switchSkipSilence = findViewById(R.id.switch_skip_silence)
         textSkipSilenceDesc = findViewById(R.id.text_skip_silence_desc)
+        itemAutoSkipSegments = findViewById(R.id.item_auto_skip_segments)
+        switchAutoSkipSegments = findViewById(R.id.switch_auto_skip_segments)
         itemBoost = findViewById(R.id.item_boost)
         textBoostValue = findViewById(R.id.text_boost_value)
         itemAudioLang = findViewById(R.id.item_audio_lang)
@@ -531,6 +535,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Skip Silence
         itemSkipSilence.setOnClickListener {
             settingsViewModel.toggleSkipSilence(!switchSkipSilence.isChecked)
+        }
+        itemAutoSkipSegments.setOnClickListener {
+            settingsViewModel.toggleAutoSkipSegments(!switchAutoSkipSegments.isChecked)
         }
 
         // Boost
@@ -788,6 +795,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.isSkipSilenceEnabled.observe(this) { enabled ->
             switchSkipSilence.isChecked = enabled
             textSkipSilenceDesc.setText(settingsViewModel.getSkipSilenceDescResId(enabled))
+        }
+        settingsViewModel.isAutoSkipSegmentsEnabled.observe(this) { enabled ->
+            switchAutoSkipSegments.isChecked = enabled
         }
         settingsViewModel.loudnessBoost.observe(this) { boost ->
             textBoostValue.text = if (boost == 0)
