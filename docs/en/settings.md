@@ -31,7 +31,7 @@ Room records older than 30 days are deleted when a playlist is loaded (`cleanupO
 | `show_info_on_change` | false | Info panel on playlist item change |
 | `show_playlist_index` | true | Numbers in the playlist |
 | `saved_playlists` | — | Playlists by link on the start screen (JSON: id, name, url). The former `startup_playlist_uri` is migrated here once and deleted |
-| `smb_servers` | — | SMB network folders of the start screen (JSON: id, name, address, user, password, domain) |
+| `smb_servers` | — | SMB network folders of the start screen (JSON: id, name, address, user, password, domain). Stored in a separate `smb_prefs` file that is excluded from backups (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`); resetting settings leaves it alone |
 | `watch_history` | — | The "Continue watching" history (JSON, up to 30 entries, one per source: a folder or a playlist) |
 | `last_channel_uri` | null | Last M3U channel (internal) |
 | `clock_transparency` | `CLOCK_OFF` (-1) | -1 off, 0..80 % transparency. Migrates from the old `show_clock` |
@@ -70,7 +70,7 @@ Room records older than 30 days are deleted when a playlist is loaded (`cleanupO
 See `SettingsRepository.kt` for the full list.
 
 "App → Reset all settings" (`resetAllSettings`) clears `global_prefs` except user data
-(`USER_DATA_KEYS`: history, playlists, SMB servers, last channel, the update check cache). Settings of individual
+(`USER_DATA_KEYS`: history, playlists, last channel, the update check cache; SMB servers live in the separate `smb_prefs`). Settings of individual
 videos in Room are not touched, the calibration counter is incremented. The confirmation is a `ChoiceDialog` with focus on "Cancel";
 after the reset the settings screen is opened again (and the language is reset if it was chosen manually).
 Add a new key holding user data (not a setting) to `USER_DATA_KEYS`.
@@ -109,7 +109,7 @@ to Room (`saveCurrentSettings`), Back rolls the changes back (`restoreSettings`)
 2. If an old key changed meaning, write a migration (example — `getClockTransparency`).
 3. `GlobalSettingsViewModel`: add a `MutableLiveData` with the initial value from the repository and a change method.
 4. `activity_global_settings.xml`: add an item to the container of the right category (`section_playback`, `section_ui`,
-   `section_video`, `section_audio`, `section_subtitles`, `section_3d`, `section_control`, `section_app`) following the
+   `section_video`, `section_audio`, `section_subtitles`, `section_segments`, `section_3d`, `section_control`, `section_app`) following the
    neighboring ones. Items are focusable: navigation is from a remote. A new category is a new `section_*` container
    plus an entry in `GlobalSettingsActivity.categories`.
 5. `GlobalSettingsActivity`: `lateinit` fields, `bindViews`, a handler in `setupListeners` and a subscription

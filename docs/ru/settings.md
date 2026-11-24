@@ -109,7 +109,7 @@
 2. Если старый ключ поменял смысл, напишите миграцию (пример — `getClockTransparency`).
 3. `GlobalSettingsViewModel`: добавьте `MutableLiveData` с начальным значением из репозитория и метод изменения.
 4. `activity_global_settings.xml`: добавьте пункт в контейнер нужной категории (`section_playback`, `section_ui`,
-   `section_video`, `section_audio`, `section_subtitles`, `section_3d`, `section_control`, `section_app`) по образцу
+   `section_video`, `section_audio`, `section_subtitles`, `section_segments`, `section_3d`, `section_control`, `section_app`) по образцу
    соседних. Пункты фокусируемые: навигация идет с пульта. Новая категория — это новый контейнер `section_*`
    плюс запись в `GlobalSettingsActivity.categories`.
 5. `GlobalSettingsActivity`: `lateinit` поля, `bindViews`, обработчик в `setupListeners` и подписка
