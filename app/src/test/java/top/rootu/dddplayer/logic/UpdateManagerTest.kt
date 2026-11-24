@@ -54,6 +54,12 @@ class UpdateManagerTest {
                 UpdateInfo("v1", "", "https://github.com/usmanec/dddplayer/releases/download/v1/app-release.apk", 1)
             )
         )
+        // Кэш от прежних версий мог хранить не-APK файл релиза
+        assertFalse(
+            updateManager.isOwnRelease(
+                UpdateInfo("v1", "", "https://github.com/EdemBey/dddplayer/releases/download/v1/sources.zip", 1)
+            )
+        )
     }
 
     @Test

@@ -166,7 +166,9 @@ class UpdateManager(private val context: Context) {
 
     /** Кэш мог остаться от оригинального репозитория: принимаем только свои релизы. */
     fun isOwnRelease(info: UpdateInfo): Boolean =
-        info.downloadUrl.startsWith("https://github.com/$REPO/")
+        info.downloadUrl.startsWith("https://github.com/$REPO/") &&
+            // Кэш от прежних версий мог указывать на не-APK файл релиза
+            info.downloadUrl.endsWith(".apk", ignoreCase = true)
 
     private fun parseVersion(version: String): List<Int>? {
         val match = VERSION_REGEX.find(version.trim().removePrefix("v")) ?: return null
