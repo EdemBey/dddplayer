@@ -1,5 +1,6 @@
 package top.rootu.dddplayer.logic
 
+import androidx.media3.common.C
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -338,5 +339,15 @@ class SkipSegmentsLogicTest {
             SkipSegmentsLogic.mergeByType(listOf(own, prev, emptyList())).filter { it.type != "recap" }
         )
         assertEquals(listOf("op", "recap", "ed"), SkipSegmentsLogic.mergeByType(listOf(own, prev, next)).map { it.type })
+    }
+
+    @Test
+    fun `skipTarget snaps an end near the end of the video to the duration`() {
+        assertEquals(1441980L, SkipSegmentsLogic.skipTarget(1441000L, 1441980L))  // measured case
+        assertEquals(1441980L, SkipSegmentsLogic.skipTarget(1442000L, 1441980L))  // past the end
+        assertEquals(1436000L, SkipSegmentsLogic.skipTarget(1436000L, 1441980L))  // 5.98 s before the end stays
+        assertEquals(90000L, SkipSegmentsLogic.skipTarget(90000L, 1441980L))
+        assertEquals(1441000L, SkipSegmentsLogic.skipTarget(1441000L, C.TIME_UNSET))
+        assertEquals(1441000L, SkipSegmentsLogic.skipTarget(1441000L, 0L))
     }
 }

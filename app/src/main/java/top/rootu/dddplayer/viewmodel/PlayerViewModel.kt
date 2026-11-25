@@ -1703,7 +1703,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (!isUserInteracting) {
             SkipSegmentsLogic.autoSkip(segments, positionMs, autoSkipped, repository.getAutoSkipTypes())?.let {
                 autoSkipped.add(it)
-                seekTo(it.endMs)
+                seekTo(SkipSegmentsLogic.skipTarget(it.endMs, playbackDurationMs()))
                 return
             }
         }
@@ -1717,7 +1717,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // Позицию берем у плеера: на паузе и сразу после перемотки кнопка может отставать
         val position = player?.currentPosition ?: return false
         val active = SkipSegmentsLogic.active(_skipSegments.value.orEmpty(), position) ?: return false
-        seekTo(active.endMs)
+        seekTo(SkipSegmentsLogic.skipTarget(active.endMs, playbackDurationMs()))
         return true
     }
 

@@ -225,6 +225,13 @@ object SkipSegmentsLogic {
     ): SkipSegment? =
         active(segments.filter { it.type in enabledTypes && it !in skipped }, positionMs)
 
+    /** Последние секунды видео, в которых конец сегмента считается концом серии. */
+    private const val END_SNAP_MS = 5000L
+
+    /** Куда перематывать при пропуске: конец сегмента у конца серии — ровно на длительность; перемотка в последнюю секунду HLS вешает плеер. */
+    fun skipTarget(endMs: Long, durationMs: Long): Long =
+        if (durationMs > 0 && endMs >= durationMs - END_SNAP_MS) durationMs else endMs
+
     /**
      * AniSkip отбирает тайминги по длине серии, kopenkin — по duration (±2 с, без него отвечает 400):
      * episodeLength=0 заменяется целыми секундами, duration=0 — секундами до 3 знаков (1512.085, 1512).
