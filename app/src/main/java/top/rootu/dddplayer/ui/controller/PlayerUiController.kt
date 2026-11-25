@@ -36,6 +36,7 @@ import top.rootu.dddplayer.ui.SubtitleStyleOptions
 import top.rootu.dddplayer.ui.adapter.OptionsAdapter
 import top.rootu.dddplayer.ui.adapter.PlaylistAdapter
 import top.rootu.dddplayer.ui.view.ChapterSeekBar
+import top.rootu.dddplayer.ui.view.ChapterProgressBar
 import top.rootu.dddplayer.ui.widget.CenterLayoutManager
 import top.rootu.dddplayer.ui.widget.OutlineTextView
 import top.rootu.dddplayer.viewmodel.SettingType
@@ -130,7 +131,7 @@ class PlayerUiController(private val rootView: View) {
     val seekDeltaText: TextView = rootView.findViewById(R.id.seek_delta)
     val seekTargetText: TextView = rootView.findViewById(R.id.seek_target_time)
     private val seekProgressPanel: View = rootView.findViewById(R.id.seek_progress_panel)
-    private val seekProgress: ProgressBar = rootView.findViewById(R.id.seek_progress)
+    val seekProgress: ChapterProgressBar = rootView.findViewById(R.id.seek_progress)
     private val seekTimeCurrent: TextView = rootView.findViewById(R.id.seek_time_current)
     private val seekTimeDuration: TextView = rootView.findViewById(R.id.seek_time_duration)
 

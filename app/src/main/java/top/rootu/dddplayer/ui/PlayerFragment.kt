@@ -1160,10 +1160,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         viewModel.duration.observe(viewLifecycleOwner) { duration ->
             ui.seekBar.max = duration.toInt()
-            ui.seekBar.setChapterStarts(
-                viewModel.chapters.value.orEmpty().map { it.startMs },
-                duration
-            )
+            val starts = viewModel.chapters.value.orEmpty().map { it.startMs }
+            ui.seekBar.setChapterStarts(starts, duration)
+            ui.seekProgress.setChapterStarts(starts, duration)
             applySkipSegmentsMarks(duration = duration)
             // Обновляем метки при изменении длительности
             val current = viewModel.currentPosition.value ?: 0L
@@ -1194,10 +1193,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
 
         viewModel.chapters.observe(viewLifecycleOwner) { chapters ->
-            ui.seekBar.setChapterStarts(
-                chapters.map { it.startMs },
-                viewModel.duration.value ?: 0L
-            )
+            val starts = chapters.map { it.startMs }
+            ui.seekBar.setChapterStarts(starts, viewModel.duration.value ?: 0L)
+            ui.seekProgress.setChapterStarts(starts, viewModel.duration.value ?: 0L)
             updateControlButtonsVisibility()
 
             // Chapters load in the background; if the user opened the main menu
@@ -1821,8 +1819,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     ) {
         val repo = SettingsRepository.getInstance(requireContext().applicationContext)
         val colors = SkipSegmentsLogic.BAND_COLORS
-        ui.seekBar.setSkipColors(SkipSegmentsLogic.TYPES.associateWith { colors[repo.getSkipSegmentsColor(it).coerceIn(colors.indices)] })
-        ui.seekBar.setSkipSegments(if (repo.isSkipSegmentsMarksEnabled()) segments else emptyList(), duration)
+        val colorMap = SkipSegmentsLogic.TYPES.associateWith { colors[repo.getSkipSegmentsColor(it).coerceIn(colors.indices)] }
+        val segs = if (repo.isSkipSegmentsMarksEnabled()) segments else emptyList()
+        ui.seekBar.setSkipColors(colorMap)
+        ui.seekBar.setSkipSegments(segs, duration)
+        ui.seekProgress.setSkipColors(colorMap)
+        ui.seekProgress.setSkipSegments(segs, duration)
     }
 
     override fun onResume() {

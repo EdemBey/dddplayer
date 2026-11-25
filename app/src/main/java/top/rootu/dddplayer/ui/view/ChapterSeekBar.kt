@@ -9,6 +9,9 @@ import android.util.Log
 import android.widget.SeekBar
 import top.rootu.dddplayer.model.SkipSegment
 
+// Жёлтый, как у опенинга по умолчанию
+internal val DEFAULT_SKIP_COLOR = Color.argb(150, 255, 196, 0)
+
 /**
  * SeekBar that draws a small tick for every chapter start.
  *
@@ -75,11 +78,7 @@ class ChapterSeekBar @JvmOverloads constructor(
 
         val centerY = height / 2f
         val half = 6f * density
-        for (start in chapterStarts) {
-            if (start <= 0L || start >= totalDurationMs) continue
-            val x = left + (right - left) * (start.toDouble() / totalDurationMs).toFloat()
-            canvas.drawLine(x, centerY - half, x, centerY + half, tickPaint)
-        }
+        drawChapterTicks(canvas, left, right, centerY, half, chapterStarts, totalDurationMs, tickPaint)
     }
 
     private fun drawSkipSegments(canvas: Canvas) {
@@ -91,16 +90,44 @@ class ChapterSeekBar @JvmOverloads constructor(
         if (right <= left) return
         val centerY = height / 2f
         val half = 2f * density
-        for (seg in skipSegments) {
-            val x1 = left + (right - left) * (seg.startMs.coerceIn(0, skipDurationMs).toFloat() / skipDurationMs)
-            val x2 = left + (right - left) * (seg.endMs.coerceIn(0, skipDurationMs).toFloat() / skipDurationMs)
-            skipPaint.color = skipColors[seg.type] ?: DEFAULT_SKIP_COLOR
-            if (x2 > x1) canvas.drawRect(x1, centerY - half, x2, centerY + half, skipPaint)
-        }
+        drawSkipBands(canvas, left, right, centerY, half, skipSegments, skipDurationMs, skipColors, skipPaint)
     }
+}
 
-    private companion object {
-        // Жёлтый, как у опенинга по умолчанию
-        val DEFAULT_SKIP_COLOR = Color.argb(150, 255, 196, 0)
+internal fun drawSkipBands(
+    canvas: Canvas,
+    left: Float,
+    right: Float,
+    centerY: Float,
+    half: Float,
+    segments: List<SkipSegment>,
+    durationMs: Long,
+    colors: Map<String, Int>,
+    paint: Paint
+) {
+    if (segments.isEmpty() || durationMs <= 0L) return
+    for (seg in segments) {
+        val x1 = left + (right - left) * (seg.startMs.coerceIn(0, durationMs).toFloat() / durationMs)
+        val x2 = left + (right - left) * (seg.endMs.coerceIn(0, durationMs).toFloat() / durationMs)
+        paint.color = colors[seg.type] ?: DEFAULT_SKIP_COLOR
+        if (x2 > x1) canvas.drawRect(x1, centerY - half, x2, centerY + half, paint)
+    }
+}
+
+internal fun drawChapterTicks(
+    canvas: Canvas,
+    left: Float,
+    right: Float,
+    centerY: Float,
+    half: Float,
+    starts: LongArray,
+    durationMs: Long,
+    paint: Paint
+) {
+    if (starts.isEmpty() || durationMs <= 0L) return
+    for (start in starts) {
+        if (start <= 0L || start >= durationMs) continue
+        val x = left + (right - left) * (start.toDouble() / durationMs).toFloat()
+        canvas.drawLine(x, centerY - half, x, centerY + half, paint)
     }
 }

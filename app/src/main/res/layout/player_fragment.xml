@@ -497,7 +497,7 @@
                 tools:text="00:45:10" />
         </LinearLayout>
 
-        <ProgressBar
+        <top.rootu.dddplayer.ui.view.ChapterProgressBar
             android:id="@+id/seek_progress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
