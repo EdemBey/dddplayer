@@ -32,9 +32,25 @@ class ChapterLogicTest {
     @Test
     fun `previous chapter restarts the current one`() {
         assertEquals(60_000L, ChapterLogic.previousChapterStart(chapters, 90_000))
+        assertEquals(60_000L, ChapterLogic.previousChapterStart(chapters, 63_001))
         assertEquals(0L, ChapterLogic.previousChapterStart(chapters, 60_000))
         assertEquals(0L, ChapterLogic.previousChapterStart(chapters, 1))
         assertNull(ChapterLogic.previousChapterStart(chapters, 0))
+    }
+
+    @Test
+    fun `previous chapter right after a chapter start goes one chapter back`() {
+        assertEquals(0L, ChapterLogic.previousChapterStart(chapters, 62_000))
+        assertEquals(0L, ChapterLogic.previousChapterStart(chapters, 60_500))
+        assertEquals(60_000L, ChapterLogic.previousChapterStart(chapters, 121_000))
+        assertEquals(0L, ChapterLogic.previousChapterStart(chapters, 2_000))
+    }
+
+    @Test
+    fun `previous chapter does not jump over a short chapter`() {
+        val short = listOf(Chapter(0, "A"), Chapter(60_000, "B"), Chapter(62_000, "C"))
+        assertEquals(60_000L, ChapterLogic.previousChapterStart(short, 63_000))
+        assertEquals(62_000L, ChapterLogic.previousChapterStart(short, 66_000))
     }
 
     @Test
