@@ -1701,7 +1701,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun updateActiveSkipSegment(positionMs: Long) {
         val segments = _skipSegments.value.orEmpty()
         if (!isUserInteracting) {
-            SkipSegmentsLogic.autoSkip(segments, positionMs, autoSkipped, repository.getAutoSkipTypes())?.let {
+            val delayMs = repository.getAutoSkipDelaySeconds() * 1000L
+            SkipSegmentsLogic.autoSkip(segments, positionMs, autoSkipped, repository.getAutoSkipTypes(), delayMs)?.let {
                 autoSkipped.add(it)
                 seekTo(SkipSegmentsLogic.skipTarget(it.endMs, playbackDurationMs()))
                 return

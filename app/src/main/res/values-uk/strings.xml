@@ -505,6 +505,8 @@
     <string name="settings_skip_color_recap">Колір переказу</string>
     <string name="settings_skip_segments_button">Кнопка «Пропустити»</string>
     <string name="settings_skip_segments_button_desc">Скільки кнопка видна після початку сегмента; OK, як і раніше, пропускає весь сегмент</string>
+    <string name="settings_auto_skip_delay">Затримка автопропуску</string>
+    <string name="settings_auto_skip_delay_desc">Скільки сегмент грає до автопропуску</string>
     <string name="skip_segments_button_whole">Весь сегмент</string>
     <string name="skip_color_yellow">Жовтий</string>
     <string name="skip_color_white">Білий</string>

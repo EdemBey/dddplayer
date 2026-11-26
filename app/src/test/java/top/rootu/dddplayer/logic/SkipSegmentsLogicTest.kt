@@ -307,6 +307,19 @@ class SkipSegmentsLogicTest {
     }
 
     @Test
+    fun `auto skip waits for the delay`() {
+        val op = SkipSegment("op", 10_000, 100_000)
+        val list = listOf(op)
+        val enabled = setOf("op")
+        assertNull(SkipSegmentsLogic.autoSkip(list, 12_000, emptySet(), enabled, 3_000))
+        assertEquals(op, SkipSegmentsLogic.autoSkip(list, 13_000, emptySet(), enabled, 3_000))
+        assertEquals(op, SkipSegmentsLogic.autoSkip(list, 10_000, emptySet(), enabled))
+        assertNull(SkipSegmentsLogic.autoSkip(listOf(SkipSegment("op", 10_000, 13_000)), 12_500, emptySet(), enabled, 3_000))
+        assertEquals(0, SkipSegmentsLogic.normalizeAutoSkipDelay(7))
+        assertEquals(3, SkipSegmentsLogic.normalizeAutoSkipDelay(3))
+    }
+
+    @Test
     fun `auto skip only for enabled types`() {
         val list = listOf(opening, ending)
         assertNull(SkipSegmentsLogic.autoSkip(list, 0, emptySet(), setOf("ed")))

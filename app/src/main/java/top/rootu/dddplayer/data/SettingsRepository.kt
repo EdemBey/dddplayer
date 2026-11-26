@@ -497,6 +497,11 @@ class SettingsRepository private constructor(context: Context) {
         SkipSegmentsLogic.normalizeButtonSeconds(prefs.getInt("skip_segments_button_seconds", 0))
     fun setSkipSegmentsButtonSeconds(seconds: Int) = prefs.edit { putInt("skip_segments_button_seconds", seconds) }
 
+    // Через сколько секунд после начала сегмента срабатывает автопропуск; 0 — сразу
+    fun getAutoSkipDelaySeconds(): Int =
+        SkipSegmentsLogic.normalizeAutoSkipDelay(prefs.getInt("auto_skip_delay_seconds", 0))
+    fun setAutoSkipDelaySeconds(seconds: Int) = prefs.edit { putInt("auto_skip_delay_seconds", seconds) }
+
     fun getPreferredAudioLang(): String = prefs.getString("pref_audio_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredAudioLang(lang: String) = prefs.edit { putString("pref_audio_lang", lang) }
 

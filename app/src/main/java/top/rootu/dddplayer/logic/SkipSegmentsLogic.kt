@@ -216,14 +216,22 @@ object SkipSegmentsLogic {
         else -> 0
     }
 
-    /** Сегмент для автопропуска: тот, где позиция, если его тип включен и его еще не пропускали в этой серии. */
+    /** Варианты «Задержка автопропуска», с: 0 — пропускать сразу. */
+    val AUTO_SKIP_DELAY_OPTIONS = intArrayOf(0, 1, 2, 3, 5, 10)
+
+    /** Сохраненное значение вне списка вариантов считается «без задержки». */
+    fun normalizeAutoSkipDelay(seconds: Int): Int = if (seconds in AUTO_SKIP_DELAY_OPTIONS) seconds else 0
+
+    /** Сегмент для автопропуска: тот, где позиция, если его тип включен, его еще не пропускали и с начала прошло delayMs. */
     fun autoSkip(
         segments: List<SkipSegment>,
         positionMs: Long,
         skipped: Set<SkipSegment>,
-        enabledTypes: Set<String>
+        enabledTypes: Set<String>,
+        delayMs: Long = 0L
     ): SkipSegment? =
         active(segments.filter { it.type in enabledTypes && it !in skipped }, positionMs)
+            ?.takeIf { positionMs >= it.startMs + delayMs }
 
     /** Последние секунды видео, в которых конец сегмента считается концом серии. */
     private const val END_SNAP_MS = 5000L

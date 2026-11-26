@@ -136,6 +136,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private val textSkipColorValue = mutableMapOf<String, TextView>()
     private lateinit var itemSkipSegmentsButton: LinearLayout
     private lateinit var textSkipSegmentsButtonValue: TextView
+    private lateinit var itemAutoSkipDelay: LinearLayout
+    private lateinit var textAutoSkipDelayValue: TextView
     private lateinit var itemBoost: LinearLayout
     private lateinit var textBoostValue: TextView
     private lateinit var itemAudioLang: LinearLayout
@@ -415,6 +417,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchSkipSegmentsMarks = findViewById(R.id.switch_skip_segments_marks)
         itemSkipSegmentsButton = findViewById(R.id.item_skip_segments_button)
         textSkipSegmentsButtonValue = findViewById(R.id.text_skip_segments_button_value)
+        itemAutoSkipDelay = findViewById(R.id.item_auto_skip_delay)
+        textAutoSkipDelayValue = findViewById(R.id.text_auto_skip_delay_value)
         itemBoost = findViewById(R.id.item_boost)
         textBoostValue = findViewById(R.id.text_boost_value)
         itemAudioLang = findViewById(R.id.item_audio_lang)
@@ -586,6 +590,13 @@ class GlobalSettingsActivity : AppCompatActivity() {
             val current = options.indexOf(settingsViewModel.skipSegmentsButtonSeconds.value ?: 0)
             showSingleChoiceDialog(getString(R.string.settings_skip_segments_button), options.map { skipButtonSecondsLabel(it) }, current) {
                 settingsViewModel.setSkipSegmentsButtonSeconds(options[it])
+            }
+        }
+        itemAutoSkipDelay.setOnClickListener {
+            val options = SkipSegmentsLogic.AUTO_SKIP_DELAY_OPTIONS
+            val current = options.indexOf(settingsViewModel.autoSkipDelaySeconds.value ?: 0)
+            showSingleChoiceDialog(getString(R.string.settings_auto_skip_delay), options.map { getString(R.string.seek_step_seconds_format, it) }, current) {
+                settingsViewModel.setAutoSkipDelaySeconds(options[it])
             }
         }
 
@@ -858,6 +869,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
         settingsViewModel.skipSegmentsButtonSeconds.observe(this) { seconds ->
             textSkipSegmentsButtonValue.text = skipButtonSecondsLabel(seconds)
+        }
+        settingsViewModel.autoSkipDelaySeconds.observe(this) { seconds ->
+            textAutoSkipDelayValue.text = getString(R.string.seek_step_seconds_format, seconds)
         }
         settingsViewModel.loudnessBoost.observe(this) { boost ->
             textBoostValue.text = if (boost == 0)

@@ -519,6 +519,8 @@
     <string name="settings_skip_color_recap">回顾颜色</string>
     <string name="settings_skip_segments_button">跳过按钮</string>
     <string name="settings_skip_segments_button_desc">片段开始后按钮显示多久；按确认键仍会跳过整个片段</string>
+    <string name="settings_auto_skip_delay">自动跳过延迟</string>
+    <string name="settings_auto_skip_delay_desc">片段播放多久后自动跳过</string>
     <string name="skip_segments_button_whole">整个片段</string>
     <string name="skip_color_yellow">黄色</string>
     <string name="skip_color_white">白色</string>

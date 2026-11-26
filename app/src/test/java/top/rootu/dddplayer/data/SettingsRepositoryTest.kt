@@ -236,6 +236,16 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `auto skip delay defaults to 0 and unknown values read as 0`() {
+        val repo = repo()
+        assertEquals(0, repo.getAutoSkipDelaySeconds())
+        repo.setAutoSkipDelaySeconds(5)
+        assertEquals(5, repo.getAutoSkipDelaySeconds())
+        repo.setAutoSkipDelaySeconds(7)
+        assertEquals(0, repo.getAutoSkipDelaySeconds())
+    }
+
+    @Test
     fun `old shared skip settings migrate to every type`() {
         prefs.edit().putBoolean("auto_skip_segments", true).putInt("skip_segments_color", 3).commit()
         val repo = repo()

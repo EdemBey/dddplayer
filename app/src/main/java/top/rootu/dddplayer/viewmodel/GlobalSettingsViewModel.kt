@@ -77,6 +77,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _skipSegmentsButtonSeconds = MutableLiveData(repository.getSkipSegmentsButtonSeconds())
     val skipSegmentsButtonSeconds: LiveData<Int> = _skipSegmentsButtonSeconds
 
+    private val _autoSkipDelaySeconds = MutableLiveData(repository.getAutoSkipDelaySeconds())
+    val autoSkipDelaySeconds: LiveData<Int> = _autoSkipDelaySeconds
+
     private val _loudnessBoost = MutableLiveData(repository.getLoudnessBoost())
     val loudnessBoost: LiveData<Int> = _loudnessBoost
 
@@ -361,6 +364,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun setSkipSegmentsButtonSeconds(seconds: Int) {
         repository.setSkipSegmentsButtonSeconds(seconds)
         _skipSegmentsButtonSeconds.value = seconds
+    }
+
+    fun setAutoSkipDelaySeconds(seconds: Int) {
+        repository.setAutoSkipDelaySeconds(seconds)
+        _autoSkipDelaySeconds.value = seconds
     }
 
     fun setSeekStepMs(ms: Int) {

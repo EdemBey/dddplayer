@@ -1005,6 +1005,33 @@
                         android:focusable="false" />
                 </LinearLayout>
 
+                <!-- Задержка перед автопропуском -->
+                <LinearLayout
+                    android:id="@+id/item_auto_skip_delay"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/settings_auto_skip_delay" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/settings_auto_skip_delay_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_auto_skip_delay_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="3 с" />
+                </LinearLayout>
+
                 <!-- Полосы сегментов на полосе прокрутки -->
                 <LinearLayout
                     android:id="@+id/item_skip_segments_marks"

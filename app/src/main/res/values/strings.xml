@@ -550,6 +550,8 @@
     <string name="settings_skip_color_recap">Recap color</string>
     <string name="settings_skip_segments_button">Skip button</string>
     <string name="settings_skip_segments_button_desc">How long the button stays after a segment starts; OK still skips the whole segment</string>
+    <string name="settings_auto_skip_delay">Auto-skip delay</string>
+    <string name="settings_auto_skip_delay_desc">How long a segment plays before auto-skip</string>
     <string name="skip_segments_button_whole">Whole segment</string>
     <string name="skip_color_yellow">Yellow</string>
     <string name="skip_color_white">White</string>
